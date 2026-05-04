@@ -1,5 +1,5 @@
 # ProVity — Project Plan
-> Module 306 | LB306-V1 | Deadline: 22.06.2025
+> Modul 306 | LB306-V1 | Abgabe: 22.06.2026
 
 ---
 
@@ -60,12 +60,13 @@
 
 | Phase | Week | Dates | Deliverable |
 |-------|------|-------|-------------|
-| **I** Informieren | 1 | May 5–9 | Situation analysis, requirements, research log |
-| **P** Planen | 2 | May 12–16 | Zeitplan, task breakdown, team org chart |
-| **E** Entscheiden | 2 | May 14–16 | Stack decision, feature scope, alternatives compared |
-| **R** Realisieren | 3–6 | May 19 – Jun 13 | Working app, daily journal, commits |
-| **K** Kontrollieren | 7 | Jun 16–20 | Test protocol, results, deviations |
-| **A** Auswerten | 8 | Jun 22 | Reflexion, Schlusswort, final submission |
+| **I** Informieren | Tag 1–2 | 04.05. + 11.05.2026 | Situationsanalyse, Anforderungen, Recherche |
+| **P** Planen | Tag 2–3 | 11.05. + 18.05.2026 | Zeitplan, Aufgabenverteilung, Projektorganisation |
+| **E** Entscheiden | Tag 3 | 18.05.2026 | Stack-Entscheid, Feature-Scope, Alternativen |
+| — | Frei | 25.05.2026 | Pfingstmontag |
+| **R** Realisieren | Tag 4–5 | 01.06. + 08.06.2026 | App bauen, Arbeitsjournal, tägliche Commits |
+| **K** Kontrollieren | Tag 5–6 | 08.06. + 15.06.2026 | Tests durchführen, Protokoll ausfüllen |
+| **A** Auswerten | Tag 6–7 | 15.06. + 22.06.2026 | Reflexion, Schlusswort, Präsentation, Abgabe |
 
 ---
 
