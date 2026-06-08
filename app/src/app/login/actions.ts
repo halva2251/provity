@@ -30,7 +30,9 @@ export async function signup(formData: FormData) {
   const { error } = await supabase.auth.signUp({ email, password });
 
   if (error) {
-    redirect(`/register?error=${encodeURIComponent(error.message)}`);
+    // Generic message — Supabase's raw error (e.g. "User already registered")
+    // would let an attacker enumerate which emails have accounts.
+    redirect("/register?error=" + encodeURIComponent("Registrierung nicht möglich. Überprüfe deine Eingaben oder versuche es später erneut."));
   }
 
   redirect("/login?message=Bestätige deine E-Mail-Adresse, um dich anzumelden.");
