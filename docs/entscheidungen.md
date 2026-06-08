@@ -29,6 +29,24 @@ Datenisolation wird über Row Level Security (RLS) sichergestellt; "Automaticall
 expose new tables" wurde bewusst deaktiviert, RLS-Policies werden pro Tabelle
 explizit geschrieben.
 
+## Containerisierung (Docker)
+
+Entscheid: kein Docker. Begründung: Vercel baut und betreibt Next.js nativ
+ohne Container; ein Dockerfile würde nur zusätzlichen Wartungsaufwand bringen
+(Build-Zeiten, Lernaufwand) ohne Mehrwert für Deployment oder Team-Setup, da
+`npm install` + `.env.local.example` bereits eine konsistente Dev-Umgebung
+sicherstellen.
+
+## CI/CD-Pipeline
+
+Entscheid: GitHub Actions Workflow (`.github/workflows/ci.yml`), der bei jedem
+Pull Request und Push auf `main`/`dev` Lint, TypeScript-Check, eine Prüfung der
+Supabase-Umgebungsvariablen sowie den Produktions-Build ausführt. Ergänzt durch
+Vercel Preview-Deployments pro Pull Request (automatisch via GitHub-Integration).
+Begründung: verhindert, dass kaputter Code in `main`/`dev` gelangt; liefert
+nachvollziehbare Qualitätssicherung für A-10/A-11 und sofort testbare Preview-
+Links für die Demo.
+
 ## Build-Reihenfolge
 
 Notizen → Todos → Pomodoro → Dashboard, da das Dashboard die Daten der
