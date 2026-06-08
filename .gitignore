@@ -1,0 +1,33 @@
+# Reference/working documents (not part of the deliverable repo)
+CLAUDE.md
+STRATEGY.md
+*.docx
+*.pdf
+~$*
+
+# Node / Next.js (app/ created later)
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env files
+.env
+.env*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+
+# Vercel
+.vercel
