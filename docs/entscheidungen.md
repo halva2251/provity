@@ -40,12 +40,24 @@ sicherstellen.
 ## CI/CD-Pipeline
 
 Entscheid: GitHub Actions Workflow (`.github/workflows/ci.yml`), der bei jedem
-Pull Request und Push auf `main`/`dev` Lint, TypeScript-Check, eine Prüfung der
+Pull Request und Push auf `main` Lint, TypeScript-Check, eine Prüfung der
 Supabase-Umgebungsvariablen sowie den Produktions-Build ausführt. Ergänzt durch
 Vercel Preview-Deployments pro Pull Request (automatisch via GitHub-Integration).
-Begründung: verhindert, dass kaputter Code in `main`/`dev` gelangt; liefert
+Begründung: verhindert, dass kaputter Code in `main` gelangt; liefert
 nachvollziehbare Qualitätssicherung für A-10/A-11 und sofort testbare Preview-
 Links für die Demo.
+
+## Branch-Modell: kein `dev`-Branch
+
+Frühe Planungsnotizen (STRATEGY.md, CLAUDE.md) erwähnten ein `dev`-`main`-Modell
+mit Feature-Branches gegen `dev`. In der Praxis liefen alle bisherigen PRs
+(#1–#4) bereits direkt gegen `main` — ein `dev`-Branch wurde nie angelegt.
+Entscheid: bei einem Single-Branch-Modell bleiben (Feature-Branches direkt
+gegen `main`, PR + Review vor Merge). Begründung: für ein 3–5-köpfiges Team
+mit kurzer Projektdauer reduziert ein zusätzlicher Integrations-Branch nur
+die Übersicht, ohne einen echten Mehrwert zu bieten — das bestehende
+PR-Review-Gate auf `main` erfüllt denselben Zweck (A-11). Die Planungsdokumente
+und CI-Konfiguration wurden entsprechend korrigiert.
 
 ## Build-Reihenfolge
 
