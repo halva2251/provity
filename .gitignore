@@ -31,3 +31,6 @@ pnpm-debug.log*
 
 # Vercel
 .vercel
+
+# Claude Code harness state
+.claude/
