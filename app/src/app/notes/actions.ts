@@ -37,6 +37,16 @@ export async function createNote(formData: FormData) {
 export async function updateNote(formData: FormData) {
   const supabase = await createClient();
 
+  // Auth-Check + expliziter user_id-Filter als zweite Schutzschicht zusätzlich
+  // zur RLS-Policy (Defense in Depth – nicht allein auf RLS verlassen).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   const id = formData.get("id") as string;
   const title = formData.get("title") as string;
   const content = formData.get("content") as string;
@@ -45,7 +55,8 @@ export async function updateNote(formData: FormData) {
   const { error } = await supabase
     .from("notes")
     .update({ title, content })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   if (error) {
     redirect(`/notes/${id}?error=${encodeURIComponent(error.message)}`);
@@ -59,9 +70,22 @@ export async function updateNote(formData: FormData) {
 export async function deleteNote(formData: FormData) {
   const supabase = await createClient();
 
+  // Auth-Check + expliziter user_id-Filter als zweite Schutzschicht zur RLS.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   const id = formData.get("id") as string;
 
-  const { error } = await supabase.from("notes").delete().eq("id", id);
+  const { error } = await supabase
+    .from("notes")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   if (error) {
     redirect(`/notes?error=${encodeURIComponent(error.message)}`);
