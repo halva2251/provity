@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { logout } from "./login/actions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,6 +17,13 @@ export default async function Home() {
       <p className="text-zinc-600 dark:text-zinc-400">
         Angemeldet als {user?.email}
       </p>
+      <Link
+        href="/todos"
+        className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+      >
+        Zu meinen Todos
+      </Link>
+
       <form>
         <button
           formAction={logout}
