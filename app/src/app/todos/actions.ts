@@ -45,7 +45,20 @@ export async function createTodo(formData: FormData) {
 export async function toggleTodo(id: string, isDone: boolean) {
   const supabase = await createClient();
 
-  await supabase.from("todos").update({ is_done: isDone }).eq("id", id);
+  // Auth-Check + expliziter user_id-Filter als zweite Schutzschicht zur RLS.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return;
+  }
+
+  await supabase
+    .from("todos")
+    .update({ is_done: isDone })
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   revalidatePath("/todos");
 }
@@ -57,7 +70,19 @@ export async function updateTodoPriority(id: string, priority: TodoPriority) {
     return;
   }
 
-  await supabase.from("todos").update({ priority }).eq("id", id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return;
+  }
+
+  await supabase
+    .from("todos")
+    .update({ priority })
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   revalidatePath("/todos");
 }
@@ -65,7 +90,15 @@ export async function updateTodoPriority(id: string, priority: TodoPriority) {
 export async function deleteTodo(id: string) {
   const supabase = await createClient();
 
-  await supabase.from("todos").delete().eq("id", id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return;
+  }
+
+  await supabase.from("todos").delete().eq("id", id).eq("user_id", user.id);
 
   revalidatePath("/todos");
 }
