@@ -29,9 +29,11 @@ grant select, insert, update, delete on table todos to authenticated;
 grant select, insert on table pomodoro_sessions to authenticated;
 
 -- Defensiv: der updated_at-Trigger auf notes ruft beim UPDATE
--- extensions.moddatetime() auf. Da diesem Projekt-Setup auch die
--- Tabellen-GRANTs fehlten, kann ebenso die EXECUTE-/USAGE-Berechtigung im
--- extensions-Schema fehlen -> UPDATE würde sonst mit 42501 scheitern.
+-- extensions.moddatetime() auf. moddatetime() ist SECURITY INVOKER (kein
+-- DEFINER), läuft also mit den Rechten der aufrufenden Rolle (authenticated) —
+-- diese braucht somit USAGE auf das extensions-Schema und EXECUTE auf die
+-- Funktion (EXECUTE ist zwar normalerweise an PUBLIC vergeben, kann in einem
+-- gehärteten Setup aber fehlen, analog zu den oben fehlenden Tabellen-GRANTs).
 -- Idempotent und unschädlich, falls Supabase das bereits vergeben hat.
 grant usage on schema extensions to authenticated;
 grant execute on function extensions.moddatetime() to authenticated;

@@ -122,6 +122,11 @@ Von database-reviewer und security-reviewer bestätigt; Datenisolation bleibt
 allein über RLS erzwungen. **Lehre:** RLS *ohne* GRANT genügt nicht — beide
 Schichten müssen den Zugriff erlauben.
 
+> **Konvention für künftige Tabellen:** Jede neue Tabellen-Migration muss die
+> passenden `grant`-Statements für `authenticated` mitliefern (Least Privilege,
+> passend zu den Policies). Sonst tritt der 42501-Fehler bei der nächsten
+> Tabelle erneut auf.
+
 ## Pomodoro-Timer — UI- und Verhaltensentscheidungen
 
 **Feste Dauer 25 Minuten (nicht konfigurierbar):** Die klassische Pomodoro-Länge
