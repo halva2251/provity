@@ -107,5 +107,31 @@ Sessions können nach dem Anlegen nicht mehr verändert oder gelöscht werden.
 Tabellen, nicht nur für die ursprünglichen Module — die Datenisolation greift
 also automatisch, ohne zusätzlichen Code.
 
+## Dashboard — Implementierung (Issue #8)
+
+**Startbildschirm: `/` leitet auf `/dashboard` um.** Optionen waren (a) das
+Dashboard direkt unter `/` rendern oder (b) eine eigene Route `/dashboard` und
+`/` per `redirect()` dorthin schicken. Gewählt: (b). Begründung: Die Issues
+listen `app/src/app/dashboard/page.tsx` als anzulegende Datei, und eine eigene,
+benennbare Route ist verlinkbar/teilbar; `/` bleibt als stabiler Einstiegspunkt
+nach dem Login (die `login`-Action redirectet weiterhin auf `/`). Verworfen:
+Dashboard-Logik in `page.tsx` der Wurzel — vermischt "Einstiegspunkt" und
+"Feature-Seite" und erschwert späteres Verlinken.
+
+**Datenladen parallel statt sequenziell.** Alle fünf Übersichts-Queries (Notizen
++ Anzahl, offene Todos + Anzahl, erledigte Todos, Pomodoro gesamt, Pomodoro
+heute) laufen in einem `Promise.all([...])`. Begründung: serielles `await` würde
+einen Request-Wasserfall erzeugen (Summe der Latenzen); parallel zählt nur die
+langsamste Query. Datenmenge wird klein gehalten über `count: "exact"` für
+Summen (mit `head: true`, wo keine Zeilen gebraucht werden) und `limit(3)` für
+die Listen — kein ungebremstes Laden aller Datensätze.
+
+**Abhängigkeit zu #5/#6/#7.** Das Dashboard liest aus `notes`, `todos`,
+`pomodoro_sessions` (Tabellen liegen bereits als Migrationen vor) und verlinkt
+auf `/notes`, `/todos`, `/pomodoro`. Diese Modul-Seiten entstehen in den
+parallelen Issues #5/#6/#7; bis zu deren Merge führen die Links ins Leere
+(404) — die Dashboard-Logik selbst ist davon unabhängig korrekt und baut/
+typprüft fehlerfrei (Next.js validiert `Link`-Ziele nicht zur Build-Zeit).
+
 <!-- Anleitung: jede relevante Entscheidung sofort nach dem Treffen eintragen,
 nicht rückwirkend rekonstruieren. -->

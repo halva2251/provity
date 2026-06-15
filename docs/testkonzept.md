@@ -31,7 +31,7 @@ auf Desktop (Chrome, Firefox) und Mobile (Smartphone, als installierte PWA).
 | T-04 | Notizen | Erstellen/Bearbeiten/Löschen | Änderungen werden persistiert und korrekt angezeigt | offen |
 | T-05 | Todos | Erstellen, Priorität setzen, als erledigt markieren | Status/Priorität korrekt gespeichert und angezeigt | offen |
 | T-06 | Pomodoro | Start/Pause/Reset, Session-Zähler | Timer läuft korrekt, Zähler erhöht sich nach Intervall | offen |
-| T-07 | Dashboard | Aggregierte Anzeige (Timer, Notizen, Todos) | Aktuelle Daten aus allen Modulen sichtbar | offen |
+| T-07 | Dashboard | Aggregierte Anzeige (Notizen-Anzahl + 3 letzte, Todos offen/erledigt + Top-3, Pomodoro heute/gesamt), Karten verlinken auf die Module | Aktuelle, korrekte Daten aus allen drei Modulen sichtbar; Leerzustände bei fehlenden Daten | Code fertig, lint/tsc/build grün; manueller 2-Konten-Test offen |
 | T-08 | PWA | Installation auf Smartphone | App lässt sich installieren und startet eigenständig | offen |
 | T-09 | Responsive | Layout auf Mobile/Desktop | Keine Überlappungen, Bedienung möglich | offen |
 
