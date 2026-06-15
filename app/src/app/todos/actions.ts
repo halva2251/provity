@@ -33,11 +33,15 @@ export async function createTodo(formData: FormData) {
     return;
   }
 
-  await supabase.from("todos").insert({
+  const { error } = await supabase.from("todos").insert({
     user_id: user.id,
     title,
     priority: VALID_PRIORITIES.includes(priority as TodoPriority) ? priority : "mittel",
   });
+
+  if (error) {
+    throw error;
+  }
 
   revalidatePath("/todos");
 }
@@ -45,7 +49,24 @@ export async function createTodo(formData: FormData) {
 export async function toggleTodo(id: string, isDone: boolean) {
   const supabase = await createClient();
 
-  await supabase.from("todos").update({ is_done: isDone }).eq("id", id);
+  // Auth-Check + expliziter user_id-Filter als zweite Schutzschicht zur RLS.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("todos")
+    .update({ is_done: isDone })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    throw error;
+  }
 
   revalidatePath("/todos");
 }
@@ -57,7 +78,23 @@ export async function updateTodoPriority(id: string, priority: TodoPriority) {
     return;
   }
 
-  await supabase.from("todos").update({ priority }).eq("id", id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("todos")
+    .update({ priority })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    throw error;
+  }
 
   revalidatePath("/todos");
 }
@@ -65,7 +102,23 @@ export async function updateTodoPriority(id: string, priority: TodoPriority) {
 export async function deleteTodo(id: string) {
   const supabase = await createClient();
 
-  await supabase.from("todos").delete().eq("id", id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("todos")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    throw error;
+  }
 
   revalidatePath("/todos");
 }
