@@ -3,16 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { clearTimer, formatTime, readTimer, writeTimer } from "@/lib/pomodoroTimer";
+
 import { logSession } from "./actions";
 
 type TimerStatus = "idle" | "running" | "paused" | "finished";
-
-function formatTime(totalSeconds: number): string {
-  const safe = Math.max(0, totalSeconds);
-  const minutes = Math.floor(safe / 60);
-  const seconds = safe % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
 
 // Kurzer Beep bei Ablauf — best effort, ohne externe Assets (Web Audio API).
 function playBeep() {
@@ -63,24 +58,35 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
     }
   }, []);
 
-  const finish = useCallback(() => {
-    if (finishedRef.current) {
-      return;
-    }
-    finishedRef.current = true;
-    clearTick();
-    endTimeRef.current = null;
-    setRemainingMs(0);
-    setStatus("finished");
-    setSaveError(null);
-    playBeep();
-    // Abgeschlossene Session speichern und Server-Zähler aktualisieren. Ein
-    // Fehler wird angezeigt, statt still verschluckt zu werden — sonst sähe der
-    // Nutzer "abgeschlossen", obwohl nichts gespeichert wurde.
-    logSession()
-      .then(() => router.refresh())
-      .catch(() => setSaveError("Session konnte nicht gespeichert werden."));
-  }, [clearTick, router]);
+  // `silent` unterdrückt den Beep — genutzt, wenn ein bereits abgelaufener Timer
+  // beim Öffnen der Seite nachträglich abgeschlossen wird (kein überraschender
+  // Ton beim blossen Navigieren).
+  const finish = useCallback(
+    ({ silent = false }: { silent?: boolean } = {}) => {
+      if (finishedRef.current) {
+        return;
+      }
+      finishedRef.current = true;
+      clearTick();
+      endTimeRef.current = null;
+      // Laufenden Zustand löschen: Dashboard/Timer zeigen danach keinen aktiven
+      // Countdown mehr an.
+      clearTimer();
+      setRemainingMs(0);
+      setStatus("finished");
+      setSaveError(null);
+      if (!silent) {
+        playBeep();
+      }
+      // Abgeschlossene Session speichern und Server-Zähler aktualisieren. Ein
+      // Fehler wird angezeigt, statt still verschluckt zu werden — sonst sähe der
+      // Nutzer "abgeschlossen", obwohl nichts gespeichert wurde.
+      logSession()
+        .then(() => router.refresh())
+        .catch(() => setSaveError("Session konnte nicht gespeichert werden."));
+    },
+    [clearTick, router],
+  );
 
   const tick = useCallback(() => {
     if (endTimeRef.current === null) {
@@ -103,6 +109,44 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
   // Interval beim Unmount aufräumen (Cleanup-Funktion des Effekts).
   useEffect(() => () => clearTick(), [clearTick]);
 
+  // Beim Mounten einen ggf. in localStorage laufenden Timer wiederherstellen,
+  // damit er Seitenwechsel (Dashboard ↔ Pomodoro) überlebt. `finish`/`startTick`
+  // sind stabile useCallbacks, daher läuft der Effekt effektiv genau einmal.
+  // Die Hydration MUSS nach dem Mounten erfolgen — während SSR/erstem Render gibt
+  // es kein localStorage; eine Lazy-Init in useState würde eine
+  // Hydration-Diskrepanz erzeugen (deshalb setState hier statt im Initializer).
+  // set-state-in-effect ist hier bewusst in Kauf genommen: die Wiederherstellung
+  // aus localStorage kann erst nach dem Mounten geschehen (kein localStorage beim
+  // SSR/ersten Render) und erfordert daher setState im Effekt. Betrifft NICHT die
+  // Dependency-Korrektheit — die Deps sind vollständig ([finish, startTick]).
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const persisted = readTimer();
+    if (!persisted) {
+      return;
+    }
+    if (persisted.status === "paused") {
+      setRemainingMs(persisted.remainingMs);
+      setStatus("paused");
+      return;
+    }
+    if (persisted.status === "running" && persisted.endTime !== null) {
+      const remaining = persisted.endTime - Date.now();
+      endTimeRef.current = persisted.endTime;
+      if (remaining <= 0) {
+        // Während der Abwesenheit abgelaufen -> jetzt abschliessen (speichern),
+        // aber ohne Beep (kein überraschender Ton beim Navigieren).
+        finish({ silent: true });
+      } else {
+        finishedRef.current = false;
+        setRemainingMs(remaining);
+        setStatus("running");
+        startTick();
+      }
+    }
+  }, [finish, startTick]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   const handleStart = useCallback(() => {
     // Aus idle/finished neu starten, aus paused fortsetzen.
     const basisMs = status === "paused" ? remainingMs : durationMs;
@@ -112,19 +156,34 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
     setRemainingMs(basisMs);
     setStatus("running");
     startTick();
-  }, [status, remainingMs, durationMs, startTick]);
+    // Lauf persistieren, damit das Dashboard den Countdown mitzeigen kann.
+    writeTimer({
+      status: "running",
+      endTime: endTimeRef.current,
+      remainingMs: basisMs,
+      durationMinutes,
+    });
+  }, [status, remainingMs, durationMs, durationMinutes, startTick]);
 
   const handlePause = useCallback(() => {
     if (status !== "running") {
       return;
     }
     clearTick();
-    if (endTimeRef.current !== null) {
-      setRemainingMs(Math.max(0, endTimeRef.current - Date.now()));
-    }
+    const snapshotMs =
+      endTimeRef.current !== null
+        ? Math.max(0, endTimeRef.current - Date.now())
+        : remainingMs;
+    setRemainingMs(snapshotMs);
     endTimeRef.current = null;
     setStatus("paused");
-  }, [status, clearTick]);
+    writeTimer({
+      status: "paused",
+      endTime: null,
+      remainingMs: snapshotMs,
+      durationMinutes,
+    });
+  }, [status, clearTick, remainingMs, durationMinutes]);
 
   const handleReset = useCallback(() => {
     clearTick();
@@ -133,6 +192,8 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
     endTimeRef.current = null;
     setRemainingMs(durationMs);
     setStatus("idle");
+    // Persistierten Lauf verwerfen.
+    clearTimer();
   }, [clearTick, durationMs]);
 
   const isFinished = status === "finished";

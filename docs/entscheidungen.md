@@ -197,5 +197,45 @@ da eine korrekte clientseitige Zeitzonenbehandlung zusätzliche Komplexität
 bedeutet; falls nötig, wird dies in einem Folgeschritt über einen
 Zeitzonen-Offset aus dem Client gelöst.
 
+## Pomodoro-Countdown auf dem Dashboard — localStorage statt globalem State
+
+**Anforderung.** Ein gestarteter Pomodoro-Timer soll auch auf dem Dashboard
+(Startbildschirm) sichtbar mitlaufen, und jede Feature-Seite braucht einen
+„Zurück zum Dashboard"-Link.
+
+**Problem.** Der Timer (`pomodoro/Timer.tsx`) ist eine Client-Komponente; ihr
+React-State geht beim Seitenwechsel (Unmount) verloren. Dashboard und
+Pomodoro-Seite teilen sich keinen Komponentenbaum.
+
+**Entscheidung: Persistenz über `localStorage` mit absolutem Ablaufzeitpunkt
+(`endTime`)** statt einer State-Library (Zustand/Context-Provider im Layout).
+Begründung:
+- **Kein zusätzliches Dependency / kein Provider** im Root-Layout nötig (KISS).
+- Die verbleibende Zeit wird überall aus `endTime - Date.now()` berechnet —
+  **driftfrei**, egal welche Seite offen ist, und konsistent mit dem bereits
+  gewählten Timer-Design.
+- Der Timer überlebt damit Seitenwechsel und sogar einen Reload.
+
+**Verworfen:** globaler Context/State-Store — für genau einen mitlaufenden
+Wert (laufender Timer) überdimensioniert; ein Layout-Provider müsste auf allen
+Seiten eingehängt werden.
+
+**Umsetzung & bewusste Grenzen.**
+- Gemeinsame Quelle in `lib/pomodoroTimer.ts` (read/write/clear + `formatTime`),
+  genutzt von Timer und Dashboard-Widget (`dashboard/PomodoroLiveStatus.tsx`).
+- **Hydration nach dem Mounten:** `localStorage` ist beim SSR/ersten Render
+  nicht verfügbar; das Lesen passiert daher in einem `useEffect` (sonst
+  Hydration-Diskrepanz). Erste Render-Ausgabe = Server-Ausgabe.
+- **Speichern bleibt beim Timer:** Läuft der Timer ab, während der Nutzer auf
+  dem Dashboard ist, zeigt das Widget „abgeschlossen" an; gespeichert wird die
+  Session erst beim Rücknavigieren zur Pomodoro-Seite (Hydration ruft dort
+  `finish()`). Bewusst akzeptiert — vermeidet doppeltes Speichern aus zwei
+  Komponenten. Bekannte Restgrenze: zwei gleichzeitig offene Pomodoro-Tabs
+  könnten nach Ablauf eine Session doppelt speichern (Edge-Case, descoped).
+- `readTimer()` validiert die aus `localStorage` gelesenen Felder defensiv
+  (Typen, Status, **Wertebereiche**: keine negativen oder absurd grossen Werte),
+  damit beschädigte/manipulierte Daten weder einen `NaN`-Countdown noch einen
+  sofort ablaufenden Timer (negatives `remainingMs`) erzeugen.
+
 <!-- Anleitung: jede relevante Entscheidung sofort nach dem Treffen eintragen,
 nicht rückwirkend rekonstruieren. -->

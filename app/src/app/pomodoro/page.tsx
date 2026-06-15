@@ -1,3 +1,4 @@
+import { BackLink } from "@/components/BackLink";
 import { DEFAULT_DURATION_MINUTES } from "@/lib/pomodoro";
 import { createClient } from "@/lib/supabase/server";
 
@@ -34,6 +35,7 @@ export default async function PomodoroPage() {
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-4 py-10 dark:bg-black">
       <div className="flex w-full max-w-lg flex-col gap-6">
+        <BackLink />
         <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Pomodoro</h1>
 
         {queryError ? (

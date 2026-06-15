@@ -1,3 +1,4 @@
+import { BackLink } from "@/components/BackLink";
 import { createClient } from "@/lib/supabase/server";
 
 import { createTodo, type Todo, type TodoPriority } from "./actions";
@@ -26,6 +27,7 @@ export default async function TodosPage() {
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-4 py-10 dark:bg-black">
       <div className="flex w-full max-w-lg flex-col gap-6">
+        <BackLink />
         <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Todos</h1>
 
         <form className="flex flex-col gap-3 rounded-lg border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
