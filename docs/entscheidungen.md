@@ -64,5 +64,48 @@ und CI-Konfiguration wurden entsprechend korrigiert.
 Notizen → Todos → Pomodoro → Dashboard, da das Dashboard die Daten der
 anderen drei Module aggregiert und somit zuletzt sinnvoll ist.
 
+## Datenbank-Schema & RLS-Design (Notes / Todos / Pomodoro)
+
+Die drei Feature-Tabellen liegen als versionierte SQL-Migrationen unter
+`app/supabase/migrations/` und werden im Supabase SQL Editor ausgeführt.
+
+**RLS-Policy-Muster (alle Tabellen):** Pro Operation eine eigene Policy
+(`select`/`insert`/`update`/`delete`) mit `auth.uid() = user_id`. Begründung
+(A-1/A-9): Datenisolation muss auf DB-Ebene erzwungen werden, nicht nur im
+Anwendungscode — selbst bei einem Bug in einer Server Action kann ein Nutzer
+keine fremden Datensätze lesen oder ändern. Verworfen: Filterung nur in der
+Applikation (kein echter Schutz, eine vergessene `where`-Klausel reicht für ein
+Datenleck).
+
+**Drei bewusste Optimierungen gegenüber dem "Minimal-SQL" aus den Issues**
+(Supabase-Best-Practices, verhaltensneutral):
+1. `(select auth.uid())` statt blankem `auth.uid()` — Postgres wertet den Wert
+   einmal pro Query aus (initPlan) statt einmal pro Zeile. RLS-Performance.
+2. `to authenticated` auf jeder Policy — anonyme Requests werden gar nicht erst
+   gegen die Policy geprüft.
+3. `create index ... (user_id)` pro Tabelle — `user_id` wird bei jeder
+   Listen-Query und jeder RLS-Prüfung gefiltert; der Fremdschlüssel wäre sonst
+   nicht indexiert.
+   Zusätzlich enthält die `update`-Policy ein `with check`, damit ein Nutzer die
+   `user_id` einer eigenen Zeile nicht auf eine fremde umschreiben kann.
+
+**Todos — Priorität als Enum (`todo_priority`) statt `text`:** Die drei Stufen
+(niedrig/mittel/hoch) sind fest und endlich. Ein Enum erzwingt gültige Werte auf
+DB-Ebene und macht ungültige Zustände unmöglich. Verworfen: `text` mit
+Check-Constraint (gleicher Effekt, aber umständlicher) bzw. `text` ohne
+Constraint (erlaubt Tippfehler/ungültige Werte). Trade-off bewusst akzeptiert:
+Enum-Werte später zu entfernen ist aufwändig — für drei stabile Stufen
+unkritisch.
+
+**Pomodoro — nur `select` + `insert`, kein `update`/`delete`:** Abgeschlossene
+Sessions sind ein unveränderliches Historien-Log (Grundlage für die
+Dashboard-Statistik). Fehlende Policies = Operation für niemanden erlaubt, d.h.
+Sessions können nach dem Anlegen nicht mehr verändert oder gelöscht werden.
+
+**Dashboard — keine eigene Tabelle/Policy:** Das Dashboard liest rein lesend aus
+`notes`, `todos`, `pomodoro_sessions`. RLS gilt für *jede* Query gegen diese
+Tabellen, nicht nur für die ursprünglichen Module — die Datenisolation greift
+also automatisch, ohne zusätzlichen Code.
+
 <!-- Anleitung: jede relevante Entscheidung sofort nach dem Treffen eintragen,
 nicht rückwirkend rekonstruieren. -->
