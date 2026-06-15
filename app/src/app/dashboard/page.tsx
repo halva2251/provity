@@ -110,9 +110,25 @@ export default async function DashboardPage() {
   const pomodoroTotal = pomodoroTotalRes.count ?? 0;
   const pomodoroToday = pomodoroTodayRes.count ?? 0;
 
+  // Fehler aus einer der parallelen Queries sichtbar machen, statt sie als
+  // leere Übersicht ("0 Notizen") zu kaschieren.
+  const queryError =
+    notesRes.error ??
+    openTodosRes.error ??
+    doneTodosRes.error ??
+    pomodoroTotalRes.error ??
+    pomodoroTodayRes.error;
+
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
       <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+        {queryError && (
+          <p className="mb-6 rounded-md bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">
+            Dashboard-Daten konnten nicht geladen werden. Bitte versuche es
+            später erneut.
+          </p>
+        )}
+
         <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">

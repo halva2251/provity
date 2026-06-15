@@ -133,5 +133,13 @@ parallelen Issues #5/#6/#7; bis zu deren Merge führen die Links ins Leere
 (404) — die Dashboard-Logik selbst ist davon unabhängig korrekt und baut/
 typprüft fehlerfrei (Next.js validiert `Link`-Ziele nicht zur Build-Zeit).
 
+**"Heute" für Pomodoro: Serverzeit (UTC).** Die "heute abgeschlossen"-Zählung
+nutzt `new Date().setHours(0,0,0,0)` auf dem Server. Auf Vercel läuft das auf
+UTC; für Nutzer in der Schweiz bedeutet das, dass Sessions erst ab 02:00 Uhr
+Ortszeit als "heute" gezählt werden. Bewusst akzeptiert für die erste Version,
+da eine korrekte clientseitige Zeitzonenbehandlung zusätzliche Komplexität
+bedeutet; falls nötig, wird dies in einem Folgeschritt über einen
+Zeitzonen-Offset aus dem Client gelöst.
+
 <!-- Anleitung: jede relevante Entscheidung sofort nach dem Treffen eintragen,
 nicht rückwirkend rekonstruieren. -->
