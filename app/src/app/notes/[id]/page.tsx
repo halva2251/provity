@@ -90,10 +90,14 @@ export default async function NoteDetailPage({
             >
               Speichern
             </button>
-
-            <DeleteButton id={note.id} />
           </div>
         </form>
+
+        {/* Ausserhalb des Bearbeiten-Formulars: verschachtelte <form> sind
+            ungültiges HTML und würden das Löschen unterbrechen. */}
+        <div className="flex justify-end">
+          <DeleteButton id={note.id} />
+        </div>
       </div>
     </div>
   );
