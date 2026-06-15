@@ -107,6 +107,37 @@ Sessions können nach dem Anlegen nicht mehr verändert oder gelöscht werden.
 Tabellen, nicht nur für die ursprünglichen Module — die Datenisolation greift
 also automatisch, ohne zusätzlichen Code.
 
+## Pomodoro-Timer — UI- und Verhaltensentscheidungen
+
+**Feste Dauer 25 Minuten (nicht konfigurierbar):** Die klassische Pomodoro-Länge
+deckt den Kern des Features ab; eine konfigurierbare Dauer würde zusätzlichen
+UI-State und Validierung erfordern, ohne den Lernzweck (Timer-Logik, Session-
+Persistenz, RLS) zu erweitern. Die Dauer liegt als Konstante
+`DEFAULT_DURATION_MINUTES` in `page.tsx` und wird der Timer-Komponente als Prop
+übergeben — eine spätere Konfigurierbarkeit ist damit ein kleiner, isolierter
+Schritt. Verworfen: konfigurierbare Dauer (Scope
+ohne Mehrwert für die DoD).
+
+**Drift-freie Zeitmessung über Ziel-Zeitstempel:** Der Timer berechnet die
+verbleibende Zeit aus der Differenz zu einem gespeicherten End-Zeitstempel
+(`Date.now()`), statt bei jedem `setInterval`-Tick einen Zähler zu dekrementieren.
+Begründung (DoD): `setInterval` feuert nicht exakt im angegebenen Intervall; ein
+reiner Zähler würde über 25 Minuten spürbar nachgehen. Das Tick-Intervall
+(200 ms) dient nur der flüssigen Anzeige, nicht der Zeitrechnung. Beim Pausieren
+wird die Restzeit festgehalten und beim Fortsetzen ein neuer End-Zeitstempel
+berechnet.
+
+**Schreibzugriff nur über Server Action:** Der Client ruft beim Ablauf die Server
+Action `logSession()` auf; es gibt keinen direkten Supabase-Schreibzugriff im
+Browser (Muster wie `app/src/app/login/actions.ts`). `getUser()` serverseitig
+bindet die Session an den eingeloggten Nutzer, die `user_id` wird nie vom Client
+übergeben — zusätzlich zur RLS-Absicherung.
+
+**Feedback bei Ablauf:** Visuell (grüner Rahmen, grüne Ziffern, Meldung
+„Session abgeschlossen!") plus dezenter Beep via Web Audio API (best effort, ohne
+externes Audio-Asset). Die Pulse-Animation ist mit `motion-safe:` versehen und
+entfällt damit bei aktivem `prefers-reduced-motion`.
+
 ## Dashboard — Implementierung (Issue #8)
 
 **Startbildschirm: `/` leitet auf `/dashboard` um.** Optionen waren (a) das
