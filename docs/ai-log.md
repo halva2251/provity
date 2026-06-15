@@ -36,6 +36,7 @@
 | 2026-06-08 | Claude | Feature-Issues (#5–#8) strukturieren, Schema- und RLS-Vorschläge | GitHub Issues Notizen/Todos/Pomodoro/Dashboard |
 | 2026-06-15 | Claude | Projektdokumentation strukturieren (Architektur-/DB-Diagramme, Zeitplan-Gerüst, IPA-Berichtsstruktur, Glossar, Testprotokoll-Vorlage) | `docs/` |
 | 2026-06-15 | Claude | SQL-Migrationen (notes/todos/pomodoro) gegen Supabase-Best-Practices prüfen & optimieren (`(select auth.uid())`, `to authenticated`, FK-Index, `with check`); Migrationsdateien anlegen, RLS-Entscheidung dokumentieren, Schema in Supabase verifizieren | `app/supabase/migrations/`, `docs/entscheidungen.md`, Issues #5–#7 |
+| 2026-06-15 | Claude | Todo-Modul (Issue #6) implementieren: Server Actions (`createTodo`, `toggleTodo`, `updateTodoPriority`, `deleteTodo`) nach Login-Muster, Todos-Seite mit Formular, Prioritäts-Badges und erledigt/offen-Sektionen | `app/src/app/todos/`, PR #10 |
 
 <!-- Anleitung: Pro Feature führt zusätzlich jede Person ihre eigenen AI-Anfragen
 nach (siehe Hinweis in den Issues). Diese hier zentral zusammenführen. -->
