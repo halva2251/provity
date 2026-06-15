@@ -107,6 +107,26 @@ Sessions können nach dem Anlegen nicht mehr verändert oder gelöscht werden.
 Tabellen, nicht nur für die ursprünglichen Module — die Datenisolation greift
 also automatisch, ohne zusätzlichen Code.
 
+**Explizite Tabellen-GRANTs (Nachtrag, Bugfix 42501).** In der laufenden App
+schlugen Inserts/Selects auf `notes` und `todos` mit
+`permission denied for table` (Postgres 42501) fehl. Ursache: RLS steuert nur,
+*welche Zeilen* eine Rolle sieht/ändert — davor prüft Postgres die klassischen
+Tabellen-Privilegien (`GRANT`). Diese werden in einem gehärteten Supabase-Setup
+(`REVOKE ALL ON SCHEMA public FROM public`) nicht automatisch an die API-Rolle
+`authenticated` vergeben. Korrektur per **append-only Migration**
+(`20260615120400_grant_table_privileges.sql`): `grant` an `authenticated` nach
+dem Least-Privilege-Prinzip — pro Tabelle nur die Operationen, die ihre Policies
+zulassen (Pomodoro nur `select`/`insert`), `anon` bewusst nichts. Zusätzlich
+`usage`/`execute` für `extensions.moddatetime` (notes-`updated_at`-Trigger).
+Von database-reviewer und security-reviewer bestätigt; Datenisolation bleibt
+allein über RLS erzwungen. **Lehre:** RLS *ohne* GRANT genügt nicht — beide
+Schichten müssen den Zugriff erlauben.
+
+> **Konvention für künftige Tabellen:** Jede neue Tabellen-Migration muss die
+> passenden `grant`-Statements für `authenticated` mitliefern (Least Privilege,
+> passend zu den Policies). Sonst tritt der 42501-Fehler bei der nächsten
+> Tabelle erneut auf.
+
 ## Pomodoro-Timer — UI- und Verhaltensentscheidungen
 
 **Feste Dauer 25 Minuten (nicht konfigurierbar):** Die klassische Pomodoro-Länge
