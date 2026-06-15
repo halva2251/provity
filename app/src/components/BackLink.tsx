@@ -5,7 +5,7 @@ import Link from "next/link";
 // bleiben (DRY). Standardziel ist das Dashboard (= Startbildschirm).
 export function BackLink({
   href = "/dashboard",
-  label = "← Zurück zum Dashboard",
+  label = "Zurück zum Dashboard",
 }: {
   href?: string;
   label?: string;
@@ -15,7 +15,8 @@ export function BackLink({
       href={href}
       className="text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
     >
-      {label}
+      {/* Pfeil rein dekorativ — von Screenreadern ausblenden. */}
+      <span aria-hidden="true">←</span> {label}
     </Link>
   );
 }

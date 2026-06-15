@@ -10,6 +10,10 @@
 
 const STORAGE_KEY = "provity:pomodoro";
 
+// Sanity-Obergrenze gegen manipulierte/beschädigte persistierte Werte
+// (24 h). Realistische Pomodoro-Dauern liegen weit darunter.
+const MAX_DURATION_MINUTES = 24 * 60;
+
 export type PersistedTimerStatus = "running" | "paused";
 
 export type PersistedTimer = {
@@ -31,14 +35,21 @@ export function readTimer(): PersistedTimer | null {
       return null;
     }
     const parsed = JSON.parse(raw) as Partial<PersistedTimer>;
-    // Defensive Validierung: beschädigte/fremde Werte ignorieren, sonst
-    // entstünde z.B. NaN im Countdown ("NaN:NaN").
+    // Defensive Validierung: beschädigte/fremde/manipulierte Werte ignorieren.
+    // Negative Werte sind besonders gefährlich: ein negatives remainingMs würde
+    // beim Fortsetzen einen Ablaufzeitpunkt in der Vergangenheit erzeugen und den
+    // Timer sofort beenden; ein NaN ergäbe "NaN:NaN" im Countdown.
     const validStatus = parsed.status === "running" || parsed.status === "paused";
     const validRemaining =
-      typeof parsed.remainingMs === "number" && Number.isFinite(parsed.remainingMs);
+      typeof parsed.remainingMs === "number" &&
+      Number.isFinite(parsed.remainingMs) &&
+      parsed.remainingMs >= 0 &&
+      parsed.remainingMs <= MAX_DURATION_MINUTES * 60 * 1000;
     const validDuration =
       typeof parsed.durationMinutes === "number" &&
-      Number.isFinite(parsed.durationMinutes);
+      Number.isFinite(parsed.durationMinutes) &&
+      parsed.durationMinutes > 0 &&
+      parsed.durationMinutes <= MAX_DURATION_MINUTES;
     const validEndTime =
       parsed.endTime === null ||
       (typeof parsed.endTime === "number" && Number.isFinite(parsed.endTime));

@@ -58,27 +58,35 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
     }
   }, []);
 
-  const finish = useCallback(() => {
-    if (finishedRef.current) {
-      return;
-    }
-    finishedRef.current = true;
-    clearTick();
-    endTimeRef.current = null;
-    // Laufenden Zustand löschen: Dashboard/Timer zeigen danach keinen aktiven
-    // Countdown mehr an.
-    clearTimer();
-    setRemainingMs(0);
-    setStatus("finished");
-    setSaveError(null);
-    playBeep();
-    // Abgeschlossene Session speichern und Server-Zähler aktualisieren. Ein
-    // Fehler wird angezeigt, statt still verschluckt zu werden — sonst sähe der
-    // Nutzer "abgeschlossen", obwohl nichts gespeichert wurde.
-    logSession()
-      .then(() => router.refresh())
-      .catch(() => setSaveError("Session konnte nicht gespeichert werden."));
-  }, [clearTick, router]);
+  // `silent` unterdrückt den Beep — genutzt, wenn ein bereits abgelaufener Timer
+  // beim Öffnen der Seite nachträglich abgeschlossen wird (kein überraschender
+  // Ton beim blossen Navigieren).
+  const finish = useCallback(
+    ({ silent = false }: { silent?: boolean } = {}) => {
+      if (finishedRef.current) {
+        return;
+      }
+      finishedRef.current = true;
+      clearTick();
+      endTimeRef.current = null;
+      // Laufenden Zustand löschen: Dashboard/Timer zeigen danach keinen aktiven
+      // Countdown mehr an.
+      clearTimer();
+      setRemainingMs(0);
+      setStatus("finished");
+      setSaveError(null);
+      if (!silent) {
+        playBeep();
+      }
+      // Abgeschlossene Session speichern und Server-Zähler aktualisieren. Ein
+      // Fehler wird angezeigt, statt still verschluckt zu werden — sonst sähe der
+      // Nutzer "abgeschlossen", obwohl nichts gespeichert wurde.
+      logSession()
+        .then(() => router.refresh())
+        .catch(() => setSaveError("Session konnte nicht gespeichert werden."));
+    },
+    [clearTick, router],
+  );
 
   const tick = useCallback(() => {
     if (endTimeRef.current === null) {
@@ -102,10 +110,15 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
   useEffect(() => () => clearTick(), [clearTick]);
 
   // Beim Mounten einen ggf. in localStorage laufenden Timer wiederherstellen,
-  // damit er Seitenwechsel (Dashboard ↔ Pomodoro) überlebt. Läuft genau einmal.
+  // damit er Seitenwechsel (Dashboard ↔ Pomodoro) überlebt. `finish`/`startTick`
+  // sind stabile useCallbacks, daher läuft der Effekt effektiv genau einmal.
   // Die Hydration MUSS nach dem Mounten erfolgen — während SSR/erstem Render gibt
   // es kein localStorage; eine Lazy-Init in useState würde eine
-  // Hydration-Diskrepanz erzeugen. Daher ist setState hier korrekt.
+  // Hydration-Diskrepanz erzeugen (deshalb setState hier statt im Initializer).
+  // set-state-in-effect ist hier bewusst in Kauf genommen: die Wiederherstellung
+  // aus localStorage kann erst nach dem Mounten geschehen (kein localStorage beim
+  // SSR/ersten Render) und erfordert daher setState im Effekt. Betrifft NICHT die
+  // Dependency-Korrektheit — die Deps sind vollständig ([finish, startTick]).
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const persisted = readTimer();
@@ -121,8 +134,9 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
       const remaining = persisted.endTime - Date.now();
       endTimeRef.current = persisted.endTime;
       if (remaining <= 0) {
-        // Während der Abwesenheit abgelaufen -> jetzt abschliessen (speichern).
-        finish();
+        // Während der Abwesenheit abgelaufen -> jetzt abschliessen (speichern),
+        // aber ohne Beep (kein überraschender Ton beim Navigieren).
+        finish({ silent: true });
       } else {
         finishedRef.current = false;
         setRemainingMs(remaining);
@@ -130,8 +144,7 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
         startTick();
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [finish, startTick]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleStart = useCallback(() => {

@@ -213,7 +213,9 @@ Seiten eingehängt werden.
   Komponenten. Bekannte Restgrenze: zwei gleichzeitig offene Pomodoro-Tabs
   könnten nach Ablauf eine Session doppelt speichern (Edge-Case, descoped).
 - `readTimer()` validiert die aus `localStorage` gelesenen Felder defensiv
-  (Typen/Status), damit beschädigte Werte keinen `NaN`-Countdown erzeugen.
+  (Typen, Status, **Wertebereiche**: keine negativen oder absurd grossen Werte),
+  damit beschädigte/manipulierte Daten weder einen `NaN`-Countdown noch einen
+  sofort ablaufenden Timer (negatives `remainingMs`) erzeugen.
 
 <!-- Anleitung: jede relevante Entscheidung sofort nach dem Treffen eintragen,
 nicht rückwirkend rekonstruieren. -->
