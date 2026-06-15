@@ -45,12 +45,16 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
 
   const [status, setStatus] = useState<TimerStatus>("idle");
   const [remainingMs, setRemainingMs] = useState(durationMs);
+  // Fehler beim Speichern der abgeschlossenen Session sichtbar machen.
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Zeitpunkt, zu dem der Timer ablaufen soll (Date.now()-Basis). Die verbleibende
   // Zeit wird daraus berechnet, statt einen Zähler zu dekrementieren — so entsteht
   // kein Drift durch ungenaue setInterval-Intervalle.
   const endTimeRef = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Verhindert doppeltes Speichern, falls finish() je mehrfach ausgelöst würde.
+  const finishedRef = useRef(false);
 
   const clearTick = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -60,14 +64,23 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
   }, []);
 
   const finish = useCallback(() => {
+    if (finishedRef.current) {
+      return;
+    }
+    finishedRef.current = true;
     clearTick();
     endTimeRef.current = null;
     setRemainingMs(0);
     setStatus("finished");
+    setSaveError(null);
     playBeep();
-    // Abgeschlossene Session speichern und Server-Zähler aktualisieren.
-    void logSession(durationMinutes).then(() => router.refresh());
-  }, [clearTick, durationMinutes, router]);
+    // Abgeschlossene Session speichern und Server-Zähler aktualisieren. Ein
+    // Fehler wird angezeigt, statt still verschluckt zu werden — sonst sähe der
+    // Nutzer "abgeschlossen", obwohl nichts gespeichert wurde.
+    logSession()
+      .then(() => router.refresh())
+      .catch(() => setSaveError("Session konnte nicht gespeichert werden."));
+  }, [clearTick, router]);
 
   const tick = useCallback(() => {
     if (endTimeRef.current === null) {
@@ -87,12 +100,14 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
     intervalRef.current = setInterval(tick, 200);
   }, [clearTick, tick]);
 
-  // Interval beim Unmount aufräumen.
-  useEffect(() => clearTick, [clearTick]);
+  // Interval beim Unmount aufräumen (Cleanup-Funktion des Effekts).
+  useEffect(() => () => clearTick(), [clearTick]);
 
   const handleStart = useCallback(() => {
     // Aus idle/finished neu starten, aus paused fortsetzen.
     const basisMs = status === "paused" ? remainingMs : durationMs;
+    finishedRef.current = false;
+    setSaveError(null);
     endTimeRef.current = Date.now() + basisMs;
     setRemainingMs(basisMs);
     setStatus("running");
@@ -113,13 +128,17 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
 
   const handleReset = useCallback(() => {
     clearTick();
+    finishedRef.current = false;
+    setSaveError(null);
     endTimeRef.current = null;
     setRemainingMs(durationMs);
     setStatus("idle");
   }, [clearTick, durationMs]);
 
   const isFinished = status === "finished";
-  const remainingSeconds = Math.round(remainingMs / 1000);
+  // Aufrunden, damit die letzte Sekunde voll angezeigt wird und nie "00:00"
+  // erscheint, solange der Timer noch läuft.
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
 
   return (
     <div
@@ -136,24 +155,40 @@ export function Timer({ durationMinutes }: { durationMinutes: number }) {
             : "text-black dark:text-zinc-50"
         }`}
         role="timer"
-        aria-live="polite"
+        aria-live="off"
       >
         {formatTime(remainingSeconds)}
       </div>
 
-      {isFinished ? (
-        <p className="text-sm font-medium text-green-600 dark:text-green-400">
-          Session abgeschlossen! Gut gemacht.
-        </p>
-      ) : (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          {status === "running"
-            ? "Timer läuft …"
-            : status === "paused"
-              ? "Pausiert"
-              : `Bereit — ${durationMinutes} Minuten`}
-        </p>
-      )}
+      {/* Eine einzige, dauerhaft vorhandene Live-Region: kündigt nur
+          Status-Wechsel an (nicht jeden Sekunden-Tick), inkl. Abschluss und
+          Speicherfehler. */}
+      <div
+        className="flex min-h-[2.5rem] flex-col items-center justify-center gap-1 text-center"
+        role="status"
+        aria-live="polite"
+      >
+        {isFinished ? (
+          <>
+            <p className="text-sm font-medium text-green-600 dark:text-green-400">
+              Session abgeschlossen! Gut gemacht.
+            </p>
+            {saveError && (
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                {saveError}
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {status === "running"
+              ? "Timer läuft …"
+              : status === "paused"
+                ? "Pausiert"
+                : `Bereit — ${durationMinutes} Minuten`}
+          </p>
+        )}
+      </div>
 
       <div className="flex gap-3">
         <button

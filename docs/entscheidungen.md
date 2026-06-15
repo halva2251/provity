@@ -113,10 +113,11 @@ also automatisch, ohne zusätzlichen Code.
 deckt den Kern des Features ab; eine konfigurierbare Dauer würde zusätzlichen
 UI-State und Validierung erfordern, ohne den Lernzweck (Timer-Logik, Session-
 Persistenz, RLS) zu erweitern. Die Dauer liegt als Konstante
-`DEFAULT_DURATION_MINUTES` in `page.tsx` und wird der Timer-Komponente als Prop
-übergeben — eine spätere Konfigurierbarkeit ist damit ein kleiner, isolierter
-Schritt. Verworfen: konfigurierbare Dauer (Scope
-ohne Mehrwert für die DoD).
+`DEFAULT_DURATION_MINUTES` zentral in `app/src/lib/pomodoro.ts` und wird sowohl
+für die Anzeige (Prop der Timer-Komponente) als auch serverseitig beim Speichern
+verwendet — eine spätere Konfigurierbarkeit ist damit ein kleiner, isolierter
+Schritt. Verworfen: konfigurierbare Dauer (Scope ohne Mehrwert für die DoD); im
+Projektplan (`PLAN.md`) entsprechend als „fixed 25-min" nachgeführt.
 
 **Drift-freie Zeitmessung über Ziel-Zeitstempel:** Der Timer berechnet die
 verbleibende Zeit aus der Differenz zu einem gespeicherten End-Zeitstempel
@@ -131,7 +132,11 @@ berechnet.
 Action `logSession()` auf; es gibt keinen direkten Supabase-Schreibzugriff im
 Browser (Muster wie `app/src/app/login/actions.ts`). `getUser()` serverseitig
 bindet die Session an den eingeloggten Nutzer, die `user_id` wird nie vom Client
-übergeben — zusätzlich zur RLS-Absicherung.
+übergeben — zusätzlich zur RLS-Absicherung. Auch die **Dauer wird nicht vom
+Client übernommen**, sondern serverseitig aus `DEFAULT_DURATION_MINUTES` gesetzt,
+damit kein manipulierter Aufruf beliebige Werte persistieren kann. Schlägt das
+Speichern fehl, wird der Fehler im Timer sichtbar gemeldet (nicht still
+verschluckt).
 
 **Feedback bei Ablauf:** Visuell (grüner Rahmen, grüne Ziffern, Meldung
 „Session abgeschlossen!") plus dezenter Beep via Web Audio API (best effort, ohne

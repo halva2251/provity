@@ -8,7 +8,7 @@
 **ProVity** is a web-based productivity app (Next.js PWA) that brings together the tools you actually use daily — in one clean interface.
 
 **Confirmed features:**
-- Pomodoro Timer (start/pause/reset, custom durations, session counter)
+- Pomodoro Timer (start/pause/reset, fixed 25-min sessions, session counter) — configurable durations descoped, see docs/entscheidungen.md
 - Notes (create/edit/delete, markdown support, tags)
 - Todo List (tasks, due dates, priorities, mark complete)
 - Dashboard (unified home: active timer + recent notes + pending todos)
