@@ -27,10 +27,10 @@ auf Desktop (Chrome, Firefox) und Mobile (Smartphone, als installierte PWA).
 |----|---------|----------|---------------------|--------|
 | T-01 | Auth | Registrierung mit gültiger E-Mail/Passwort | Konto wird erstellt, Login möglich | offen |
 | T-02 | Auth | Login mit falschem Passwort | Fehlermeldung, kein Zugriff | offen |
-| T-03 | Auth | Datenisolation | User A sieht keine Daten von User B | offen |
+| T-03 | Auth | Datenisolation | User A sieht keine Daten von User B (inkl. Pomodoro-Sessions) | bereit zum Test |
 | T-04 | Notizen | Erstellen/Bearbeiten/Löschen | Änderungen werden persistiert und korrekt angezeigt | offen |
 | T-05 | Todos | Erstellen, Priorität setzen, als erledigt markieren | Status/Priorität korrekt gespeichert und angezeigt | offen |
-| T-06 | Pomodoro | Start/Pause/Reset, Session-Zähler | Timer läuft korrekt, Zähler erhöht sich nach Intervall | offen |
+| T-06 | Pomodoro | Start/Pause/Reset, Session-Zähler | Timer läuft korrekt, Zähler erhöht sich nach Intervall | bereit zum Test |
 | T-07 | Dashboard | Aggregierte Anzeige (Notizen-Anzahl + 3 letzte, Todos offen/erledigt + Top-3, Pomodoro heute/gesamt), Karten verlinken auf die Module | Aktuelle, korrekte Daten aus allen drei Modulen sichtbar; Leerzustände bei fehlenden Daten | Code fertig, lint/tsc/build grün; manueller 2-Konten-Test offen |
 | T-08 | PWA | Installation auf Smartphone | App lässt sich installieren und startet eigenständig | offen |
 | T-09 | Responsive | Layout auf Mobile/Desktop | Keine Überlappungen, Bedienung möglich | offen |
@@ -41,6 +41,7 @@ auf Desktop (Chrome, Firefox) und Mobile (Smartphone, als installierte PWA).
 - Offline-Synchronisation — explizit aus dem Projektumfang ausgeschlossen
 - Browser-Kompatibilität ausserhalb Chrome/Firefox/Safari — Ressourcenbeschränkung im Schulumfeld
 - Penetrationstests / Security-Audits — über den Rahmen eines Modul-306-Projekts hinaus; RLS-Policies werden funktional, nicht adversarial getestet
+- Persistenz eines laufenden Pomodoro-Timers — der Timer-State lebt im Browser-Tab (`useState`); beim Schliessen oder Neuladen der Seite geht ein laufender, noch nicht abgeschlossener Timer verloren. Bewusst akzeptiert: nur abgeschlossene Sessions sind relevant (werden in der DB gespeichert), eine Wiederaufnahme über Tabs/Geräte hinweg ist kein Projektziel.
 
 <!-- Anleitung (vor Abgabe entfernen): Status-Spalte während Kontrollieren-Phase
 ausfüllen (bestanden/fehlgeschlagen) -> wandert ins docs/testprotokoll.md -->

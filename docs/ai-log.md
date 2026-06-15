@@ -36,7 +36,9 @@
 | 2026-06-08 | Claude | Feature-Issues (#5–#8) strukturieren, Schema- und RLS-Vorschläge | GitHub Issues Notizen/Todos/Pomodoro/Dashboard |
 | 2026-06-15 | Claude | Projektdokumentation strukturieren (Architektur-/DB-Diagramme, Zeitplan-Gerüst, IPA-Berichtsstruktur, Glossar, Testprotokoll-Vorlage) | `docs/` |
 | 2026-06-15 | Claude | SQL-Migrationen (notes/todos/pomodoro) gegen Supabase-Best-Practices prüfen & optimieren (`(select auth.uid())`, `to authenticated`, FK-Index, `with check`); Migrationsdateien anlegen, RLS-Entscheidung dokumentieren, Schema in Supabase verifizieren | `app/supabase/migrations/`, `docs/entscheidungen.md`, Issues #5–#7 |
+| 2026-06-15 | Claude | Pomodoro-Feature (Issue #7) umsetzen: drift-freie Timer-Client-Komponente (Start/Pause/Reset, Ziel-Zeitstempel), Server Action zum Speichern abgeschlossener Sessions, Server-Component mit Tages-/Gesamt-Zähler; UI-Entscheidungen dokumentieren, Testkonzept aktualisieren | `app/src/app/pomodoro/`, `docs/entscheidungen.md`, `docs/testkonzept.md` |
 | 2026-06-15 | Claude | Dashboard (Issue #8) umsetzen: Server Component mit parallelem Datenladen (`Promise.all`) aus notes/todos/pomodoro_sessions, wiederverwendbare `SummaryCard`, Leerzustände, `/`→`/dashboard`-Redirect; lint/tsc/build geprüft | Dashboard-Feature (`app/src/app/dashboard/`, `app/src/app/page.tsx`) |
+| 2026-06-15 | Claude | Code-Review PR #14 (Pomodoro) + Fixes: Query-Fehler im Page sichtbar machen, Speicherfehler im Timer melden, Dauer serverseitig setzen (nicht vom Client), `finish()`-Doppelschutz, `aria-live` nur auf Status statt jedem Tick, `Math.ceil`-Anzeige, Konstante nach `lib/pomodoro.ts`, `PLAN.md` (Custom-Dauer descoped) | `app/src/app/pomodoro/`, `app/src/lib/pomodoro.ts`, `PLAN.md`, `docs/entscheidungen.md` |
 
 <!-- Anleitung: Pro Feature führt zusätzlich jede Person ihre eigenen AI-Anfragen
 nach (siehe Hinweis in den Issues). Diese hier zentral zusammenführen. -->
