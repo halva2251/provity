@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { logout } from "../login/actions";
 import { createClient } from "@/lib/supabase/server";
+import { PomodoroLiveStatus } from "./PomodoroLiveStatus";
 import { SummaryCard } from "./SummaryCard";
 
 type RecentNote = { id: string; title: string; updated_at: string };
@@ -243,28 +244,34 @@ export default async function DashboardPage() {
             total={pomodoroToday}
             totalLabel="heute abgeschlossen"
           >
-            {pomodoroTotal > 0 ? (
-              <div className="flex flex-col gap-1">
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Insgesamt{" "}
-                  <span className="font-semibold text-black dark:text-zinc-50">
-                    {pomodoroTotal}
-                  </span>{" "}
-                  {pomodoroTotal === 1 ? "Session" : "Sessions"} abgeschlossen
-                </p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {pomodoroToday > 0
-                    ? "Stark — weiter so!"
-                    : "Heute noch keine Session — Zeit für Fokus."}
-                </p>
-              </div>
-            ) : (
-              <EmptyState
-                text="Noch keine Sessions."
-                href="/pomodoro"
-                cta="Timer starten"
-              />
-            )}
+            {/* Läuft gerade ein Timer, zeigt PomodoroLiveStatus den Countdown;
+                sonst die statischen Session-Zahlen (fallback). */}
+            <PomodoroLiveStatus
+              fallback={
+                pomodoroTotal > 0 ? (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Insgesamt{" "}
+                      <span className="font-semibold text-black dark:text-zinc-50">
+                        {pomodoroTotal}
+                      </span>{" "}
+                      {pomodoroTotal === 1 ? "Session" : "Sessions"} abgeschlossen
+                    </p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                      {pomodoroToday > 0
+                        ? "Stark — weiter so!"
+                        : "Heute noch keine Session — Zeit für Fokus."}
+                    </p>
+                  </div>
+                ) : (
+                  <EmptyState
+                    text="Noch keine Sessions."
+                    href="/pomodoro"
+                    cta="Timer starten"
+                  />
+                )
+              }
+            />
           </SummaryCard>
         </div>
       </main>
