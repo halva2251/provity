@@ -1,0 +1,453 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             targetNamespace="http://dietike.ch/bpm/bug-handling-soll"
+             id="Definitions_SOLL">
+
+  <!--
+    SOLL-Prozess: Bug/Incident Handling mit Automatisierung
+    Verbesserungen gegenüber IST:
+    - Automatische Klassifizierung via GitHub Actions (ServiceTask)
+    - SLA-Timer: Eskalation nach 4 Stunden ohne Bearbeitung
+    - Automatische Zuweisung via Auto-Assign
+    - CI/CD-Testing: vollautomatisch
+    - Automatisches Deployment nach grünem Build
+    - Automatisches Issue-Schliessen via Commit-Referenz
+  -->
+
+  <collaboration id="Collab_SOLL">
+    <participant id="Pool_SOLL" name="Dietike Austreiben AG" processRef="Process_BugSOLL"/>
+  </collaboration>
+
+  <process id="Process_BugSOLL" name="Bug/Incident Handling – SOLL-Prozess" isExecutable="false">
+    <laneSet id="LaneSet_SOLL">
+      <lane id="Lane_Entw_SOLL" name="Entwickler">
+        <flowNodeRef>SE_SOLL_Start</flowNodeRef>
+        <flowNodeRef>T_SOLL_Erfassen</flowNodeRef>
+        <flowNodeRef>T_SOLL_BugBeheben</flowNodeRef>
+      </lane>
+      <lane id="Lane_ITSys" name="IT-System (Automatisiert)">
+        <flowNodeRef>ST_Klassifizieren</flowNodeRef>
+        <flowNodeRef>GW_SOLL_Kritisch</flowNodeRef>
+        <flowNodeRef>ST_NotifyDev</flowNodeRef>
+        <flowNodeRef>GW_SOLL_Merge</flowNodeRef>
+        <flowNodeRef>ST_CITests</flowNodeRef>
+        <flowNodeRef>GW_SOLL_Test</flowNodeRef>
+        <flowNodeRef>GW_SOLL_NachKrit</flowNodeRef>
+        <flowNodeRef>GW_SOLL_MergeClose</flowNodeRef>
+        <flowNodeRef>ST_IssueClose</flowNodeRef>
+        <flowNodeRef>EE_SOLL_End</flowNodeRef>
+      </lane>
+      <lane id="Lane_DevOps_SOLL" name="DevOps / QA (Automatisiert)">
+        <flowNodeRef>ST_WartungAkt</flowNodeRef>
+        <flowNodeRef>ST_Deploy</flowNodeRef>
+        <flowNodeRef>ST_WartungDeakt</flowNodeRef>
+        <flowNodeRef>T_SOLL_SLANotify</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <!-- Boundary Timer Event auf ST_Klassifizieren -->
+    <boundaryEvent id="BE_SLA" name="SLA 4h überschritten" attachedToRef="ST_Klassifizieren" cancelActivity="false">
+      <timerEventDefinition>
+        <timeDuration>PT4H</timeDuration>
+      </timerEventDefinition>
+      <outgoing>SF_SLA</outgoing>
+    </boundaryEvent>
+
+    <startEvent id="SE_SOLL_Start" name="Bug in GitHub Issues erfasst">
+      <outgoing>SF_S1</outgoing>
+    </startEvent>
+
+    <task id="T_SOLL_Erfassen" name="Bug beschreiben und Labels setzen">
+      <incoming>SF_S1</incoming>
+      <outgoing>SF_S2</outgoing>
+    </task>
+
+    <!-- ServiceTask: automatische Klassifizierung -->
+    <serviceTask id="ST_Klassifizieren" name="Bug automatisch klassifizieren (GitHub Actions)">
+      <incoming>SF_S2</incoming>
+      <outgoing>SF_S3</outgoing>
+    </serviceTask>
+
+    <!-- SLA-Eskalations-Task -->
+    <task id="T_SOLL_SLANotify" name="Teamleiter über SLA-Verletzung benachrichtigen">
+      <incoming>SF_SLA</incoming>
+    </task>
+
+    <exclusiveGateway id="GW_SOLL_Kritisch" name="Kritischer Bug?">
+      <incoming>SF_S3</incoming>
+      <outgoing>SF_S4_Ja</outgoing>
+      <outgoing>SF_S4_Nein</outgoing>
+    </exclusiveGateway>
+
+    <!-- ServiceTask: Wartungsmodus + Team benachrichtigen -->
+    <serviceTask id="ST_WartungAkt" name="Wartungsmodus aktivieren und Team benachrichtigen (automatisch)">
+      <incoming>SF_S4_Ja</incoming>
+      <outgoing>SF_S5</outgoing>
+    </serviceTask>
+
+    <!-- ServiceTask: Entwickler benachrichtigen -->
+    <serviceTask id="ST_NotifyDev" name="Entwickler automatisch zuweisen und benachrichtigen">
+      <incoming>SF_S4_Nein</incoming>
+      <outgoing>SF_S5b</outgoing>
+    </serviceTask>
+
+    <exclusiveGateway id="GW_SOLL_Merge" name="">
+      <incoming>SF_S5</incoming>
+      <incoming>SF_S5b</incoming>
+      <outgoing>SF_S6</outgoing>
+    </exclusiveGateway>
+
+    <task id="T_SOLL_BugBeheben" name="Bug analysieren, beheben und Commit erstellen (Fixes #Issue)">
+      <incoming>SF_S6</incoming>
+      <incoming>SF_SOLL_TestFail</incoming>
+      <outgoing>SF_S7</outgoing>
+    </task>
+
+    <!-- ServiceTask: CI/CD Tests automatisch ausführen -->
+    <serviceTask id="ST_CITests" name="CI/CD-Tests automatisch ausführen (GitHub Actions)">
+      <incoming>SF_S7</incoming>
+      <outgoing>SF_S8</outgoing>
+    </serviceTask>
+
+    <exclusiveGateway id="GW_SOLL_Test" name="Tests bestanden?">
+      <incoming>SF_S8</incoming>
+      <outgoing>SF_SOLL_TestFail</outgoing>
+      <outgoing>SF_SOLL_TestOk</outgoing>
+    </exclusiveGateway>
+
+    <!-- ServiceTask: automatisches Deployment -->
+    <serviceTask id="ST_Deploy" name="Automatisches Deployment via CI/CD-Pipeline">
+      <incoming>SF_SOLL_TestOk</incoming>
+      <outgoing>SF_S9</outgoing>
+    </serviceTask>
+
+    <exclusiveGateway id="GW_SOLL_NachKrit" name="War Wartungsmodus aktiv?">
+      <incoming>SF_S9</incoming>
+      <outgoing>SF_S10_Ja</outgoing>
+      <outgoing>SF_S10_Nein</outgoing>
+    </exclusiveGateway>
+
+    <!-- ServiceTask: Wartungsmodus automatisch deaktivieren -->
+    <serviceTask id="ST_WartungDeakt" name="Wartungsmodus automatisch deaktivieren">
+      <incoming>SF_S10_Ja</incoming>
+      <outgoing>SF_S11</outgoing>
+    </serviceTask>
+
+    <exclusiveGateway id="GW_SOLL_MergeClose" name="">
+      <incoming>SF_S11</incoming>
+      <incoming>SF_S10_Nein</incoming>
+      <outgoing>SF_S12</outgoing>
+    </exclusiveGateway>
+
+    <!-- ServiceTask: Issue automatisch schliessen -->
+    <serviceTask id="ST_IssueClose" name="GitHub Issue automatisch schliessen und Bericht erstellen">
+      <incoming>SF_S12</incoming>
+      <outgoing>SF_S13</outgoing>
+    </serviceTask>
+
+    <endEvent id="EE_SOLL_End" name="Bug behoben, Issue geschlossen, Team benachrichtigt">
+      <incoming>SF_S13</incoming>
+    </endEvent>
+
+    <!-- Sequence Flows -->
+    <sequenceFlow id="SF_S1" sourceRef="SE_SOLL_Start" targetRef="T_SOLL_Erfassen"/>
+    <sequenceFlow id="SF_S2" sourceRef="T_SOLL_Erfassen" targetRef="ST_Klassifizieren"/>
+    <sequenceFlow id="SF_S3" sourceRef="ST_Klassifizieren" targetRef="GW_SOLL_Kritisch"/>
+    <sequenceFlow id="SF_SLA" sourceRef="BE_SLA" targetRef="T_SOLL_SLANotify"/>
+    <sequenceFlow id="SF_S4_Ja" name="Ja" sourceRef="GW_SOLL_Kritisch" targetRef="ST_WartungAkt"/>
+    <sequenceFlow id="SF_S4_Nein" name="Nein" sourceRef="GW_SOLL_Kritisch" targetRef="ST_NotifyDev"/>
+    <sequenceFlow id="SF_S5" sourceRef="ST_WartungAkt" targetRef="GW_SOLL_Merge"/>
+    <sequenceFlow id="SF_S5b" sourceRef="ST_NotifyDev" targetRef="GW_SOLL_Merge"/>
+    <sequenceFlow id="SF_S6" sourceRef="GW_SOLL_Merge" targetRef="T_SOLL_BugBeheben"/>
+    <sequenceFlow id="SF_S7" sourceRef="T_SOLL_BugBeheben" targetRef="ST_CITests"/>
+    <sequenceFlow id="SF_S8" sourceRef="ST_CITests" targetRef="GW_SOLL_Test"/>
+    <sequenceFlow id="SF_SOLL_TestFail" name="Nein" sourceRef="GW_SOLL_Test" targetRef="T_SOLL_BugBeheben"/>
+    <sequenceFlow id="SF_SOLL_TestOk" name="Ja" sourceRef="GW_SOLL_Test" targetRef="ST_Deploy"/>
+    <sequenceFlow id="SF_S9" sourceRef="ST_Deploy" targetRef="GW_SOLL_NachKrit"/>
+    <sequenceFlow id="SF_S10_Ja" name="Ja" sourceRef="GW_SOLL_NachKrit" targetRef="ST_WartungDeakt"/>
+    <sequenceFlow id="SF_S10_Nein" name="Nein" sourceRef="GW_SOLL_NachKrit" targetRef="GW_SOLL_MergeClose"/>
+    <sequenceFlow id="SF_S11" sourceRef="ST_WartungDeakt" targetRef="GW_SOLL_MergeClose"/>
+    <sequenceFlow id="SF_S12" sourceRef="GW_SOLL_MergeClose" targetRef="ST_IssueClose"/>
+    <sequenceFlow id="SF_S13" sourceRef="ST_IssueClose" targetRef="EE_SOLL_End"/>
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_SOLL">
+    <bpmndi:BPMNPlane id="BPMNPlane_SOLL" bpmnElement="Collab_SOLL">
+
+      <!-- Pool: 3 lanes, each 160px tall = 480px total -->
+      <bpmndi:BPMNShape id="Pool_SOLL_di" bpmnElement="Pool_SOLL" isHorizontal="true">
+        <dc:Bounds x="130" y="82" width="2900" height="480"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Lane_Entw_SOLL_di" bpmnElement="Lane_Entw_SOLL" isHorizontal="true">
+        <dc:Bounds x="160" y="82" width="2870" height="160"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_ITSys_di" bpmnElement="Lane_ITSys" isHorizontal="true">
+        <dc:Bounds x="160" y="242" width="2870" height="160"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_DevOps_SOLL_di" bpmnElement="Lane_DevOps_SOLL" isHorizontal="true">
+        <dc:Bounds x="160" y="402" width="2870" height="160"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Lane y-centers: Entwickler=162, IT-System=322, DevOps=482 -->
+
+      <!-- Start Event (Entwickler) -->
+      <bpmndi:BPMNShape id="SE_SOLL_Start_di" bpmnElement="SE_SOLL_Start">
+        <dc:Bounds x="222" y="144" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="196" y="187" width="88" height="40"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- T_SOLL_Erfassen (Entwickler) -->
+      <bpmndi:BPMNShape id="T_SOLL_Erfassen_di" bpmnElement="T_SOLL_Erfassen">
+        <dc:Bounds x="320" y="122" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- ST_Klassifizieren (IT-System) -->
+      <bpmndi:BPMNShape id="ST_Klassifizieren_di" bpmnElement="ST_Klassifizieren">
+        <dc:Bounds x="510" y="282" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- BE_SLA (boundary on ST_Klassifizieren, non-interrupting timer) -->
+      <bpmndi:BPMNShape id="BE_SLA_di" bpmnElement="BE_SLA">
+        <dc:Bounds x="524" y="344" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="498" y="387" width="88" height="27"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- T_SOLL_SLANotify (DevOps lane) -->
+      <bpmndi:BPMNShape id="T_SOLL_SLANotify_di" bpmnElement="T_SOLL_SLANotify">
+        <dc:Bounds x="510" y="442" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- GW_SOLL_Kritisch (IT-System) -->
+      <bpmndi:BPMNShape id="GW_SOLL_Kritisch_di" bpmnElement="GW_SOLL_Kritisch" isMarkerVisible="true">
+        <dc:Bounds x="705" y="297" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="686" y="354" width="88" height="27"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ST_WartungAkt (DevOps) -->
+      <bpmndi:BPMNShape id="ST_WartungAkt_di" bpmnElement="ST_WartungAkt">
+        <dc:Bounds x="820" y="442" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- ST_NotifyDev (IT-System) -->
+      <bpmndi:BPMNShape id="ST_NotifyDev_di" bpmnElement="ST_NotifyDev">
+        <dc:Bounds x="820" y="282" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- GW_SOLL_Merge (IT-System) -->
+      <bpmndi:BPMNShape id="GW_SOLL_Merge_di" bpmnElement="GW_SOLL_Merge" isMarkerVisible="true">
+        <dc:Bounds x="1015" y="297" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+
+      <!-- T_SOLL_BugBeheben (Entwickler) -->
+      <bpmndi:BPMNShape id="T_SOLL_BugBeheben_di" bpmnElement="T_SOLL_BugBeheben">
+        <dc:Bounds x="1130" y="122" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- ST_CITests (IT-System) -->
+      <bpmndi:BPMNShape id="ST_CITests_di" bpmnElement="ST_CITests">
+        <dc:Bounds x="1330" y="282" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- GW_SOLL_Test (IT-System) -->
+      <bpmndi:BPMNShape id="GW_SOLL_Test_di" bpmnElement="GW_SOLL_Test" isMarkerVisible="true">
+        <dc:Bounds x="1525" y="297" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1506" y="354" width="88" height="27"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ST_Deploy (DevOps) -->
+      <bpmndi:BPMNShape id="ST_Deploy_di" bpmnElement="ST_Deploy">
+        <dc:Bounds x="1660" y="442" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- GW_SOLL_NachKrit (IT-System) -->
+      <bpmndi:BPMNShape id="GW_SOLL_NachKrit_di" bpmnElement="GW_SOLL_NachKrit" isMarkerVisible="true">
+        <dc:Bounds x="1865" y="297" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1840" y="354" width="100" height="40"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ST_WartungDeakt (DevOps) -->
+      <bpmndi:BPMNShape id="ST_WartungDeakt_di" bpmnElement="ST_WartungDeakt">
+        <dc:Bounds x="1980" y="442" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- GW_SOLL_MergeClose (IT-System) -->
+      <bpmndi:BPMNShape id="GW_SOLL_MergeClose_di" bpmnElement="GW_SOLL_MergeClose" isMarkerVisible="true">
+        <dc:Bounds x="2165" y="297" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+
+      <!-- ST_IssueClose (IT-System) -->
+      <bpmndi:BPMNShape id="ST_IssueClose_di" bpmnElement="ST_IssueClose">
+        <dc:Bounds x="2280" y="282" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- End Event (IT-System) -->
+      <bpmndi:BPMNShape id="EE_SOLL_End_di" bpmnElement="EE_SOLL_End">
+        <dc:Bounds x="2472" y="304" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2446" y="347" width="88" height="54"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Sequence Flow Edges -->
+
+      <!-- SF_S1: Start → T_Erfassen -->
+      <bpmndi:BPMNEdge id="SF_S1_di" bpmnElement="SF_S1">
+        <di:waypoint x="258" y="162"/>
+        <di:waypoint x="320" y="162"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S2: T_Erfassen → ST_Klassifizieren (cross to IT-System) -->
+      <bpmndi:BPMNEdge id="SF_S2_di" bpmnElement="SF_S2">
+        <di:waypoint x="440" y="162"/>
+        <di:waypoint x="440" y="322"/>
+        <di:waypoint x="510" y="322"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S3: ST_Klassifizieren → GW_Kritisch -->
+      <bpmndi:BPMNEdge id="SF_S3_di" bpmnElement="SF_S3">
+        <di:waypoint x="630" y="322"/>
+        <di:waypoint x="705" y="322"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_SLA: BE_SLA → T_SLANotify -->
+      <bpmndi:BPMNEdge id="SF_SLA_di" bpmnElement="SF_SLA">
+        <di:waypoint x="542" y="380"/>
+        <di:waypoint x="542" y="442"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S4_Ja: GW_Kritisch → ST_WartungAkt (down) -->
+      <bpmndi:BPMNEdge id="SF_S4_Ja_di" bpmnElement="SF_S4_Ja">
+        <di:waypoint x="730" y="347"/>
+        <di:waypoint x="730" y="482"/>
+        <di:waypoint x="820" y="482"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="736" y="412" width="17" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S4_Nein: GW_Kritisch → ST_NotifyDev -->
+      <bpmndi:BPMNEdge id="SF_S4_Nein_di" bpmnElement="SF_S4_Nein">
+        <di:waypoint x="755" y="322"/>
+        <di:waypoint x="820" y="322"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="775" y="304" width="28" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S5: ST_WartungAkt → GW_Merge (up) -->
+      <bpmndi:BPMNEdge id="SF_S5_di" bpmnElement="SF_S5">
+        <di:waypoint x="940" y="482"/>
+        <di:waypoint x="1040" y="482"/>
+        <di:waypoint x="1040" y="347"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S5b: ST_NotifyDev → GW_Merge -->
+      <bpmndi:BPMNEdge id="SF_S5b_di" bpmnElement="SF_S5b">
+        <di:waypoint x="940" y="322"/>
+        <di:waypoint x="1015" y="322"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S6: GW_Merge → T_BugBeheben (up to Entwickler) -->
+      <bpmndi:BPMNEdge id="SF_S6_di" bpmnElement="SF_S6">
+        <di:waypoint x="1065" y="322"/>
+        <di:waypoint x="1065" y="162"/>
+        <di:waypoint x="1130" y="162"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S7: T_BugBeheben → ST_CITests (down to IT-System) -->
+      <bpmndi:BPMNEdge id="SF_S7_di" bpmnElement="SF_S7">
+        <di:waypoint x="1250" y="162"/>
+        <di:waypoint x="1250" y="322"/>
+        <di:waypoint x="1330" y="322"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S8: ST_CITests → GW_Test -->
+      <bpmndi:BPMNEdge id="SF_S8_di" bpmnElement="SF_S8">
+        <di:waypoint x="1450" y="322"/>
+        <di:waypoint x="1525" y="322"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_SOLL_TestFail: GW_Test → T_BugBeheben (loop back) -->
+      <bpmndi:BPMNEdge id="SF_SOLL_TestFail_di" bpmnElement="SF_SOLL_TestFail">
+        <di:waypoint x="1550" y="297"/>
+        <di:waypoint x="1550" y="96"/>
+        <di:waypoint x="1190" y="96"/>
+        <di:waypoint x="1190" y="122"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1468" y="200" width="28" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_SOLL_TestOk: GW_Test → ST_Deploy (down to DevOps) -->
+      <bpmndi:BPMNEdge id="SF_SOLL_TestOk_di" bpmnElement="SF_SOLL_TestOk">
+        <di:waypoint x="1550" y="347"/>
+        <di:waypoint x="1550" y="482"/>
+        <di:waypoint x="1660" y="482"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1556" y="412" width="17" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S9: ST_Deploy → GW_NachKrit (up to IT-System) -->
+      <bpmndi:BPMNEdge id="SF_S9_di" bpmnElement="SF_S9">
+        <di:waypoint x="1780" y="482"/>
+        <di:waypoint x="1890" y="482"/>
+        <di:waypoint x="1890" y="347"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S10_Ja: GW_NachKrit → ST_WartungDeakt (down) -->
+      <bpmndi:BPMNEdge id="SF_S10_Ja_di" bpmnElement="SF_S10_Ja">
+        <di:waypoint x="1890" y="347"/>
+        <di:waypoint x="1890" y="482"/>
+        <di:waypoint x="1980" y="482"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1896" y="412" width="17" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S10_Nein: GW_NachKrit → GW_MergeClose -->
+      <bpmndi:BPMNEdge id="SF_S10_Nein_di" bpmnElement="SF_S10_Nein">
+        <di:waypoint x="1915" y="322"/>
+        <di:waypoint x="2165" y="322"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2028" y="304" width="28" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S11: ST_WartungDeakt → GW_MergeClose (up) -->
+      <bpmndi:BPMNEdge id="SF_S11_di" bpmnElement="SF_S11">
+        <di:waypoint x="2100" y="482"/>
+        <di:waypoint x="2190" y="482"/>
+        <di:waypoint x="2190" y="347"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S12: GW_MergeClose → ST_IssueClose -->
+      <bpmndi:BPMNEdge id="SF_S12_di" bpmnElement="SF_S12">
+        <di:waypoint x="2215" y="322"/>
+        <di:waypoint x="2280" y="322"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_S13: ST_IssueClose → End -->
+      <bpmndi:BPMNEdge id="SF_S13_di" bpmnElement="SF_S13">
+        <di:waypoint x="2400" y="322"/>
+        <di:waypoint x="2472" y="322"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

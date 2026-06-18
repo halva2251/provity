@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             targetNamespace="http://dietike.ch/bpm/bug-handling-ist"
+             id="Definitions_IST">
+
+  <collaboration id="Collab_IST">
+    <participant id="Pool_Dietike" name="Dietike Austreiben AG" processRef="Process_BugIST"/>
+  </collaboration>
+
+  <process id="Process_BugIST" name="Bug/Incident Handling – IST-Prozess" isExecutable="false">
+    <laneSet id="LaneSet_IST">
+      <lane id="Lane_Entwickler" name="Entwickler">
+        <flowNodeRef>SE_BugEntdeckt</flowNodeRef>
+        <flowNodeRef>T_BugErfassen</flowNodeRef>
+        <flowNodeRef>T_BugAnalysieren</flowNodeRef>
+        <flowNodeRef>T_BugBeheben</flowNodeRef>
+      </lane>
+      <lane id="Lane_Teamleiter" name="Teamleiter">
+        <flowNodeRef>T_BugPruefen</flowNodeRef>
+        <flowNodeRef>GW_Kritisch</flowNodeRef>
+        <flowNodeRef>GW_MergeKritisch</flowNodeRef>
+        <flowNodeRef>T_BugZuweisen</flowNodeRef>
+        <flowNodeRef>GW_NachKrit</flowNodeRef>
+        <flowNodeRef>GW_MergeClose</flowNodeRef>
+        <flowNodeRef>T_IssueSchliessen</flowNodeRef>
+        <flowNodeRef>EE_BugBehoben</flowNodeRef>
+      </lane>
+      <lane id="Lane_QA" name="QA Engineer">
+        <flowNodeRef>T_Testen</flowNodeRef>
+        <flowNodeRef>GW_Test</flowNodeRef>
+      </lane>
+      <lane id="Lane_DevOps" name="DevOps / Operations">
+        <flowNodeRef>T_WartungAkt</flowNodeRef>
+        <flowNodeRef>T_Deploy</flowNodeRef>
+        <flowNodeRef>T_WartungDeakt</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <startEvent id="SE_BugEntdeckt" name="Bug entdeckt">
+      <outgoing>SF_1</outgoing>
+    </startEvent>
+
+    <task id="T_BugErfassen" name="Bug in GitHub Issues erfassen">
+      <incoming>SF_1</incoming>
+      <outgoing>SF_2</outgoing>
+    </task>
+
+    <task id="T_BugPruefen" name="Bug-Meldung prüfen und klassifizieren">
+      <incoming>SF_2</incoming>
+      <outgoing>SF_3</outgoing>
+    </task>
+
+    <exclusiveGateway id="GW_Kritisch" name="Kritischer Bug?">
+      <incoming>SF_3</incoming>
+      <outgoing>SF_4_Ja</outgoing>
+      <outgoing>SF_4_Nein</outgoing>
+    </exclusiveGateway>
+
+    <task id="T_WartungAkt" name="Anwendung in Wartungsmodus setzen">
+      <incoming>SF_4_Ja</incoming>
+      <outgoing>SF_5</outgoing>
+    </task>
+
+    <exclusiveGateway id="GW_MergeKritisch" name="">
+      <incoming>SF_5</incoming>
+      <incoming>SF_4_Nein</incoming>
+      <outgoing>SF_6</outgoing>
+    </exclusiveGateway>
+
+    <task id="T_BugZuweisen" name="Bug dem Entwickler zuweisen">
+      <incoming>SF_6</incoming>
+      <outgoing>SF_7</outgoing>
+    </task>
+
+    <task id="T_BugAnalysieren" name="Bug analysieren und reproduzieren">
+      <incoming>SF_7</incoming>
+      <incoming>SF_TestFail</incoming>
+      <outgoing>SF_8</outgoing>
+    </task>
+
+    <task id="T_BugBeheben" name="Bug beheben und Commit erstellen">
+      <incoming>SF_8</incoming>
+      <outgoing>SF_9</outgoing>
+    </task>
+
+    <task id="T_Testen" name="Lösung testen und verifizieren">
+      <incoming>SF_9</incoming>
+      <outgoing>SF_10</outgoing>
+    </task>
+
+    <exclusiveGateway id="GW_Test" name="Test bestanden?">
+      <incoming>SF_10</incoming>
+      <outgoing>SF_TestFail</outgoing>
+      <outgoing>SF_TestOk</outgoing>
+    </exclusiveGateway>
+
+    <task id="T_Deploy" name="Deployment auf Production">
+      <incoming>SF_TestOk</incoming>
+      <outgoing>SF_11</outgoing>
+    </task>
+
+    <exclusiveGateway id="GW_NachKrit" name="War Wartungsmodus aktiv?">
+      <incoming>SF_11</incoming>
+      <outgoing>SF_12_Ja</outgoing>
+      <outgoing>SF_12_Nein</outgoing>
+    </exclusiveGateway>
+
+    <task id="T_WartungDeakt" name="Wartungsmodus deaktivieren">
+      <incoming>SF_12_Ja</incoming>
+      <outgoing>SF_13</outgoing>
+    </task>
+
+    <exclusiveGateway id="GW_MergeClose" name="">
+      <incoming>SF_13</incoming>
+      <incoming>SF_12_Nein</incoming>
+      <outgoing>SF_14</outgoing>
+    </exclusiveGateway>
+
+    <task id="T_IssueSchliessen" name="GitHub Issue schliessen und dokumentieren">
+      <incoming>SF_14</incoming>
+      <outgoing>SF_15</outgoing>
+    </task>
+
+    <endEvent id="EE_BugBehoben" name="Bug behoben und Issue geschlossen">
+      <incoming>SF_15</incoming>
+    </endEvent>
+
+    <sequenceFlow id="SF_1" sourceRef="SE_BugEntdeckt" targetRef="T_BugErfassen"/>
+    <sequenceFlow id="SF_2" sourceRef="T_BugErfassen" targetRef="T_BugPruefen"/>
+    <sequenceFlow id="SF_3" sourceRef="T_BugPruefen" targetRef="GW_Kritisch"/>
+    <sequenceFlow id="SF_4_Ja" name="Ja" sourceRef="GW_Kritisch" targetRef="T_WartungAkt"/>
+    <sequenceFlow id="SF_4_Nein" name="Nein" sourceRef="GW_Kritisch" targetRef="GW_MergeKritisch"/>
+    <sequenceFlow id="SF_5" sourceRef="T_WartungAkt" targetRef="GW_MergeKritisch"/>
+    <sequenceFlow id="SF_6" sourceRef="GW_MergeKritisch" targetRef="T_BugZuweisen"/>
+    <sequenceFlow id="SF_7" sourceRef="T_BugZuweisen" targetRef="T_BugAnalysieren"/>
+    <sequenceFlow id="SF_8" sourceRef="T_BugAnalysieren" targetRef="T_BugBeheben"/>
+    <sequenceFlow id="SF_9" sourceRef="T_BugBeheben" targetRef="T_Testen"/>
+    <sequenceFlow id="SF_10" sourceRef="T_Testen" targetRef="GW_Test"/>
+    <sequenceFlow id="SF_TestFail" name="Nein" sourceRef="GW_Test" targetRef="T_BugAnalysieren"/>
+    <sequenceFlow id="SF_TestOk" name="Ja" sourceRef="GW_Test" targetRef="T_Deploy"/>
+    <sequenceFlow id="SF_11" sourceRef="T_Deploy" targetRef="GW_NachKrit"/>
+    <sequenceFlow id="SF_12_Ja" name="Ja" sourceRef="GW_NachKrit" targetRef="T_WartungDeakt"/>
+    <sequenceFlow id="SF_12_Nein" name="Nein" sourceRef="GW_NachKrit" targetRef="GW_MergeClose"/>
+    <sequenceFlow id="SF_13" sourceRef="T_WartungDeakt" targetRef="GW_MergeClose"/>
+    <sequenceFlow id="SF_14" sourceRef="GW_MergeClose" targetRef="T_IssueSchliessen"/>
+    <sequenceFlow id="SF_15" sourceRef="T_IssueSchliessen" targetRef="EE_BugBehoben"/>
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_IST">
+    <bpmndi:BPMNPlane id="BPMNPlane_IST" bpmnElement="Collab_IST">
+
+      <!-- Pool -->
+      <bpmndi:BPMNShape id="Pool_Dietike_di" bpmnElement="Pool_Dietike" isHorizontal="true">
+        <dc:Bounds x="130" y="82" width="3050" height="560"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Lanes (each 140px tall) -->
+      <bpmndi:BPMNShape id="Lane_Entwickler_di" bpmnElement="Lane_Entwickler" isHorizontal="true">
+        <dc:Bounds x="160" y="82" width="3020" height="140"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Teamleiter_di" bpmnElement="Lane_Teamleiter" isHorizontal="true">
+        <dc:Bounds x="160" y="222" width="3020" height="140"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_QA_di" bpmnElement="Lane_QA" isHorizontal="true">
+        <dc:Bounds x="160" y="362" width="3020" height="140"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_DevOps_di" bpmnElement="Lane_DevOps" isHorizontal="true">
+        <dc:Bounds x="160" y="502" width="3020" height="140"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Lane y-centers: Entwickler=152, Teamleiter=292, QA=432, DevOps=572 -->
+
+      <!-- Start Event -->
+      <bpmndi:BPMNShape id="SE_BugEntdeckt_di" bpmnElement="SE_BugEntdeckt">
+        <dc:Bounds x="242" y="134" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="226" y="177" width="68" height="27"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- T_BugErfassen -->
+      <bpmndi:BPMNShape id="T_BugErfassen_di" bpmnElement="T_BugErfassen">
+        <dc:Bounds x="340" y="112" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- T_BugPruefen -->
+      <bpmndi:BPMNShape id="T_BugPruefen_di" bpmnElement="T_BugPruefen">
+        <dc:Bounds x="530" y="252" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- GW_Kritisch -->
+      <bpmndi:BPMNShape id="GW_Kritisch_di" bpmnElement="GW_Kritisch" isMarkerVisible="true">
+        <dc:Bounds x="725" y="267" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="706" y="324" width="88" height="27"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- T_WartungAkt -->
+      <bpmndi:BPMNShape id="T_WartungAkt_di" bpmnElement="T_WartungAkt">
+        <dc:Bounds x="840" y="532" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- GW_MergeKritisch -->
+      <bpmndi:BPMNShape id="GW_MergeKritisch_di" bpmnElement="GW_MergeKritisch" isMarkerVisible="true">
+        <dc:Bounds x="1015" y="267" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+
+      <!-- T_BugZuweisen -->
+      <bpmndi:BPMNShape id="T_BugZuweisen_di" bpmnElement="T_BugZuweisen">
+        <dc:Bounds x="1130" y="252" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- T_BugAnalysieren -->
+      <bpmndi:BPMNShape id="T_BugAnalysieren_di" bpmnElement="T_BugAnalysieren">
+        <dc:Bounds x="1330" y="112" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- T_BugBeheben -->
+      <bpmndi:BPMNShape id="T_BugBeheben_di" bpmnElement="T_BugBeheben">
+        <dc:Bounds x="1530" y="112" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- T_Testen -->
+      <bpmndi:BPMNShape id="T_Testen_di" bpmnElement="T_Testen">
+        <dc:Bounds x="1730" y="392" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- GW_Test -->
+      <bpmndi:BPMNShape id="GW_Test_di" bpmnElement="GW_Test" isMarkerVisible="true">
+        <dc:Bounds x="1925" y="407" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1906" y="464" width="88" height="27"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- T_Deploy -->
+      <bpmndi:BPMNShape id="T_Deploy_di" bpmnElement="T_Deploy">
+        <dc:Bounds x="2070" y="532" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- GW_NachKrit -->
+      <bpmndi:BPMNShape id="GW_NachKrit_di" bpmnElement="GW_NachKrit" isMarkerVisible="true">
+        <dc:Bounds x="2265" y="267" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2240" y="324" width="100" height="40"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- T_WartungDeakt -->
+      <bpmndi:BPMNShape id="T_WartungDeakt_di" bpmnElement="T_WartungDeakt">
+        <dc:Bounds x="2380" y="532" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- GW_MergeClose -->
+      <bpmndi:BPMNShape id="GW_MergeClose_di" bpmnElement="GW_MergeClose" isMarkerVisible="true">
+        <dc:Bounds x="2565" y="267" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+
+      <!-- T_IssueSchliessen -->
+      <bpmndi:BPMNShape id="T_IssueSchliessen_di" bpmnElement="T_IssueSchliessen">
+        <dc:Bounds x="2680" y="252" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- End Event -->
+      <bpmndi:BPMNShape id="EE_BugBehoben_di" bpmnElement="EE_BugBehoben">
+        <dc:Bounds x="2872" y="274" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2846" y="317" width="88" height="40"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Sequence Flow Edges -->
+
+      <!-- SF_1: Start → T_BugErfassen -->
+      <bpmndi:BPMNEdge id="SF_1_di" bpmnElement="SF_1">
+        <di:waypoint x="278" y="152"/>
+        <di:waypoint x="340" y="152"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_2: T_BugErfassen → T_BugPruefen (cross lane down) -->
+      <bpmndi:BPMNEdge id="SF_2_di" bpmnElement="SF_2">
+        <di:waypoint x="460" y="152"/>
+        <di:waypoint x="460" y="292"/>
+        <di:waypoint x="530" y="292"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_3: T_BugPruefen → GW_Kritisch -->
+      <bpmndi:BPMNEdge id="SF_3_di" bpmnElement="SF_3">
+        <di:waypoint x="650" y="292"/>
+        <di:waypoint x="725" y="292"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_4_Ja: GW_Kritisch → T_WartungAkt (down to DevOps) -->
+      <bpmndi:BPMNEdge id="SF_4_Ja_di" bpmnElement="SF_4_Ja">
+        <di:waypoint x="750" y="317"/>
+        <di:waypoint x="750" y="572"/>
+        <di:waypoint x="840" y="572"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="756" y="442" width="17" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_4_Nein: GW_Kritisch → GW_MergeKritisch -->
+      <bpmndi:BPMNEdge id="SF_4_Nein_di" bpmnElement="SF_4_Nein">
+        <di:waypoint x="775" y="292"/>
+        <di:waypoint x="1015" y="292"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="888" y="274" width="28" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_5: T_WartungAkt → GW_MergeKritisch (up from DevOps) -->
+      <bpmndi:BPMNEdge id="SF_5_di" bpmnElement="SF_5">
+        <di:waypoint x="960" y="572"/>
+        <di:waypoint x="1040" y="572"/>
+        <di:waypoint x="1040" y="317"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_6: GW_MergeKritisch → T_BugZuweisen -->
+      <bpmndi:BPMNEdge id="SF_6_di" bpmnElement="SF_6">
+        <di:waypoint x="1065" y="292"/>
+        <di:waypoint x="1130" y="292"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_7: T_BugZuweisen → T_BugAnalysieren (up to Entwickler) -->
+      <bpmndi:BPMNEdge id="SF_7_di" bpmnElement="SF_7">
+        <di:waypoint x="1250" y="292"/>
+        <di:waypoint x="1250" y="152"/>
+        <di:waypoint x="1330" y="152"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_8: T_BugAnalysieren → T_BugBeheben -->
+      <bpmndi:BPMNEdge id="SF_8_di" bpmnElement="SF_8">
+        <di:waypoint x="1450" y="152"/>
+        <di:waypoint x="1530" y="152"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_9: T_BugBeheben → T_Testen (down to QA) -->
+      <bpmndi:BPMNEdge id="SF_9_di" bpmnElement="SF_9">
+        <di:waypoint x="1650" y="152"/>
+        <di:waypoint x="1650" y="432"/>
+        <di:waypoint x="1730" y="432"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_10: T_Testen → GW_Test -->
+      <bpmndi:BPMNEdge id="SF_10_di" bpmnElement="SF_10">
+        <di:waypoint x="1850" y="432"/>
+        <di:waypoint x="1925" y="432"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_TestFail: GW_Test → T_BugAnalysieren (loop back) -->
+      <bpmndi:BPMNEdge id="SF_TestFail_di" bpmnElement="SF_TestFail">
+        <di:waypoint x="1950" y="407"/>
+        <di:waypoint x="1950" y="95"/>
+        <di:waypoint x="1390" y="95"/>
+        <di:waypoint x="1390" y="112"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1870" y="200" width="28" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_TestOk: GW_Test → T_Deploy (down to DevOps) -->
+      <bpmndi:BPMNEdge id="SF_TestOk_di" bpmnElement="SF_TestOk">
+        <di:waypoint x="1950" y="457"/>
+        <di:waypoint x="1950" y="572"/>
+        <di:waypoint x="2070" y="572"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1956" y="512" width="17" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_11: T_Deploy → GW_NachKrit (up to Teamleiter) -->
+      <bpmndi:BPMNEdge id="SF_11_di" bpmnElement="SF_11">
+        <di:waypoint x="2190" y="572"/>
+        <di:waypoint x="2290" y="572"/>
+        <di:waypoint x="2290" y="317"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_12_Ja: GW_NachKrit → T_WartungDeakt (down to DevOps) -->
+      <bpmndi:BPMNEdge id="SF_12_Ja_di" bpmnElement="SF_12_Ja">
+        <di:waypoint x="2290" y="317"/>
+        <di:waypoint x="2290" y="572"/>
+        <di:waypoint x="2380" y="572"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2296" y="442" width="17" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_12_Nein: GW_NachKrit → GW_MergeClose -->
+      <bpmndi:BPMNEdge id="SF_12_Nein_di" bpmnElement="SF_12_Nein">
+        <di:waypoint x="2315" y="292"/>
+        <di:waypoint x="2565" y="292"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2428" y="274" width="28" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_13: T_WartungDeakt → GW_MergeClose (up from DevOps) -->
+      <bpmndi:BPMNEdge id="SF_13_di" bpmnElement="SF_13">
+        <di:waypoint x="2500" y="572"/>
+        <di:waypoint x="2590" y="572"/>
+        <di:waypoint x="2590" y="317"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_14: GW_MergeClose → T_IssueSchliessen -->
+      <bpmndi:BPMNEdge id="SF_14_di" bpmnElement="SF_14">
+        <di:waypoint x="2615" y="292"/>
+        <di:waypoint x="2680" y="292"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- SF_15: T_IssueSchliessen → End -->
+      <bpmndi:BPMNEdge id="SF_15_di" bpmnElement="SF_15">
+        <di:waypoint x="2800" y="292"/>
+        <di:waypoint x="2872" y="292"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
