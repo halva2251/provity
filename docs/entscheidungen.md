@@ -136,8 +136,27 @@ Persistenz, RLS) zu erweitern. Die Dauer liegt als Konstante
 `DEFAULT_DURATION_MINUTES` zentral in `app/src/lib/pomodoro.ts` und wird sowohl
 für die Anzeige (Prop der Timer-Komponente) als auch serverseitig beim Speichern
 verwendet — eine spätere Konfigurierbarkeit ist damit ein kleiner, isolierter
-Schritt. Verworfen: konfigurierbare Dauer (Scope ohne Mehrwert für die DoD); im
-Projektplan (`PLAN.md`) entsprechend als „fixed 25-min" nachgeführt.
+Schritt. Verworfen: **frei konfigurierbare** Dauer (Scope ohne Mehrwert für die
+DoD). Hinweis: Das feste 5-Minuten-Pausen-Intervall (siehe nächster Punkt) ist
+davon unberührt — „nicht konfigurierbar" meint frei einstellbare Werte, nicht
+das Fehlen einer Pause.
+
+**Arbeits-/Pausen-Intervall (25 min Arbeit / 5 min Pause, Intervallwechsel):**
+Der Projektauftrag nennt explizit „25-Min-Arbeit / 5-Min-Pause" und einen
+Intervallwechsel (Ziel 3). Umgesetzt: Nach Abschluss einer Arbeits-Session
+wechselt der Timer ins Pausen-Intervall (5 min), nach der Pause zurück zur
+Arbeit. Beide Dauern liegen als Konstanten `WORK_DURATION_MINUTES` /
+`BREAK_DURATION_MINUTES` zentral in `app/src/lib/pomodoro.ts`
+(`DEFAULT_DURATION_MINUTES` bleibt als Alias = Arbeitslänge für die Server
+Action). Bewusst **manueller Start je Intervall** statt automatischem Durchlauf:
+passt zum bestehenden Start/Pause/Reset-Modell, vermeidet überraschende
+Tonausgabe und schliesst Doppel-Speicherungen aus. **Nur abgeschlossene
+Arbeits-Sessions werden in der DB gezählt** — Pausen sind keine Pomodoros und
+lösen kein `logSession()` aus. Die aktive Phase wird in `localStorage`
+mitgeführt (`phase`), sodass Reload und das Dashboard-Widget das richtige
+Intervall anzeigen (rückwärtskompatibel: Alteinträge ohne `phase` gelten als
+„work"). `Reset` führt stets zurück zum Arbeits-Intervall (Ausstieg aus einer
+Pause).
 
 **Drift-freie Zeitmessung über Ziel-Zeitstempel:** Der Timer berechnet die
 verbleibende Zeit aus der Differenz zu einem gespeicherten End-Zeitstempel

@@ -16,6 +16,9 @@ const MAX_DURATION_MINUTES = 24 * 60;
 
 export type PersistedTimerStatus = "running" | "paused";
 
+/** Aktuelles Intervall: Arbeitsphase oder Pause. */
+export type PomodoroPhase = "work" | "break";
+
 export type PersistedTimer = {
   status: PersistedTimerStatus;
   /** Epoch-ms des Ablaufs; gesetzt wenn `running`, sonst null. */
@@ -23,6 +26,8 @@ export type PersistedTimer = {
   /** Verbleibende ms — Snapshot für `paused` (und Basis beim Start). */
   remainingMs: number;
   durationMinutes: number;
+  /** Welches Intervall gerade läuft/pausiert ist. */
+  phase: PomodoroPhase;
 };
 
 export function readTimer(): PersistedTimer | null {
@@ -56,17 +61,24 @@ export function readTimer(): PersistedTimer | null {
     // Ein laufender Timer braucht zwingend einen Ablaufzeitpunkt.
     const runningHasEndTime =
       parsed.status !== "running" || typeof parsed.endTime === "number";
+    // Rückwärtskompatibel: ältere persistierte Einträge ohne `phase` gelten als
+    // Arbeitsphase. Andere Werte ausser "work"/"break" sind ungültig.
+    const validPhase =
+      parsed.phase === undefined ||
+      parsed.phase === "work" ||
+      parsed.phase === "break";
 
     if (
       !validStatus ||
       !validRemaining ||
       !validDuration ||
       !validEndTime ||
-      !runningHasEndTime
+      !runningHasEndTime ||
+      !validPhase
     ) {
       return null;
     }
-    return parsed as PersistedTimer;
+    return { phase: "work", ...parsed } as PersistedTimer;
   } catch {
     return null;
   }
