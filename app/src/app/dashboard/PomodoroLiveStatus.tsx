@@ -2,18 +2,29 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { formatTime, readTimer } from "@/lib/pomodoroTimer";
+import { formatTime, readTimer, type PomodoroPhase } from "@/lib/pomodoroTimer";
 
 type LiveState = {
   status: "running" | "paused" | "finished";
+  phase: PomodoroPhase;
   remainingSeconds: number;
 };
 
-const STATUS_LABEL: Record<LiveState["status"], string> = {
-  running: "Timer läuft …",
-  paused: "Pausiert",
-  finished: "Session abgeschlossen — im Timer abschliessen",
+const PHASE_LABEL: Record<PomodoroPhase, string> = {
+  work: "Arbeit",
+  break: "Pause",
 };
+
+function statusLabel({ status, phase }: LiveState): string {
+  switch (status) {
+    case "running":
+      return `${PHASE_LABEL[phase]} läuft …`;
+    case "paused":
+      return `${PHASE_LABEL[phase]} pausiert`;
+    case "finished":
+      return "Abgeschlossen — im Timer fortsetzen";
+  }
+}
 
 /**
  * Zeigt auf dem Dashboard einen mitlaufenden Pomodoro-Countdown, sobald ein
@@ -38,6 +49,7 @@ export function PomodoroLiveStatus({ fallback }: { fallback: ReactNode }) {
       if (persisted.status === "paused") {
         setLive({
           status: "paused",
+          phase: persisted.phase,
           remainingSeconds: Math.ceil(persisted.remainingMs / 1000),
         });
         return;
@@ -46,8 +58,12 @@ export function PomodoroLiveStatus({ fallback }: { fallback: ReactNode }) {
         const remaining = persisted.endTime - Date.now();
         setLive(
           remaining <= 0
-            ? { status: "finished", remainingSeconds: 0 }
-            : { status: "running", remainingSeconds: Math.ceil(remaining / 1000) },
+            ? { status: "finished", phase: persisted.phase, remainingSeconds: 0 }
+            : {
+                status: "running",
+                phase: persisted.phase,
+                remainingSeconds: Math.ceil(remaining / 1000),
+              },
         );
       }
     };
@@ -72,7 +88,7 @@ export function PomodoroLiveStatus({ fallback }: { fallback: ReactNode }) {
         {formatTime(live.remainingSeconds)}
       </p>
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        {STATUS_LABEL[live.status]}
+        {statusLabel(live)}
       </p>
     </div>
   );

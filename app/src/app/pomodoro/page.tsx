@@ -1,5 +1,5 @@
 import { BackLink } from "@/components/BackLink";
-import { DEFAULT_DURATION_MINUTES } from "@/lib/pomodoro";
+import { BREAK_DURATION_MINUTES, WORK_DURATION_MINUTES } from "@/lib/pomodoro";
 import { createClient } from "@/lib/supabase/server";
 
 import { Timer } from "./Timer";
@@ -55,7 +55,10 @@ export default async function PomodoroPage() {
           </div>
         )}
 
-        <Timer durationMinutes={DEFAULT_DURATION_MINUTES} />
+        <Timer
+          workMinutes={WORK_DURATION_MINUTES}
+          breakMinutes={BREAK_DURATION_MINUTES}
+        />
       </div>
     </div>
   );
